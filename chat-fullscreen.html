@@ -64,14 +64,14 @@
             line-height: 1.6;
             word-break: break-word;
         }
-        .message.received {
+        .message.user {
             background: #fff;
             color: #333;
             align-self: flex-start;
             border-bottom-left-radius: 4px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
         }
-        .message.sent {
+        .message.agent {
             background: linear-gradient(135deg, #1a6fc4 0%, #2b7de9 100%);
             color: #fff;
             align-self: flex-end;
@@ -247,7 +247,6 @@
         const SUPABASE_URL = 'https://qafwjrfozumfzhrbtuue.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhZndqcmZvenVtZnpocmJ0dXVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NDk0NjQsImV4cCI6MjEwMTUyNTQ2NH0.vztS1Ar2ec9bnWuhdVUS76dF04PnJjDWBVnWZKuOB4I';
         
-        // 初始化 Supabase
         let supabase;
         try {
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -255,54 +254,22 @@
             console.error('Supabase 初始化失败:', e);
         }
 
-        let currentUser = null;
+        let currentVisitorId = null;
         let pendingImage = null;
 
-        // 生成用户ID
-        function generateUserId() {
-            return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        // 生成访客ID
+        function generateVisitorId() {
+            return 'v-' + Math.random().toString(36).substr(2, 6);
         }
 
-        // 获取或创建用户
-        async function getOrCreateUser() {
-            let userId = localStorage.getItem('chatUserId');
-            if (!userId) {
-                userId = generateUserId();
-                localStorage.setItem('chatUserId', userId);
+        // 获取或创建访客
+        async function getOrCreateVisitor() {
+            currentVisitorId = localStorage.getItem('visitor_id');
+            if (!currentVisitorId) {
+                currentVisitorId = generateVisitorId();
+                localStorage.setItem('visitor_id', currentVisitorId);
             }
-            
-            // 在 Supabase 中注册
-            const { data, error } = await supabase
-                .from('users')
-                .upsert({ id: userId, name: '用户' + userId.slice(-4), status: 'online' })
-                .select()
-                .single();
-            
-            if (error) {
-                console.error('用户注册失败:', error);
-            }
-            
-            return { id: userId, name: '用户' + userId.slice(-4) };
-        }
-
-        // 加载配置
-        async function loadConfig() {
-            const { data, error } = await supabase
-                .from('config')
-                .select('key, value');
-            
-            if (error) {
-                console.error('加载配置失败:', error);
-                return;
-            }
-            
-            data.forEach(item => {
-                if (item.key === 'title') {
-                    document.getElementById('headerTitle').textContent = item.value;
-                } else if (item.key === 'logo' && item.value) {
-                    document.getElementById('headerLogo').innerHTML = `<img src="${escapeHtml(item.value)}" alt="Logo">`;
-                }
-            });
+            return currentVisitorId;
         }
 
         // 加载消息
@@ -310,7 +277,7 @@
             const { data, error } = await supabase
                 .from('messages')
                 .select('*')
-                .eq('user_id', currentUser.id)
+                .eq('visitor_id', currentVisitorId)
                 .order('created_at', { ascending: true });
             
             if (error) {
@@ -328,14 +295,13 @@
             
             messages.forEach(msg => {
                 const div = document.createElement('div');
-                div.className = `message ${msg.type === 'agent' ? 'sent' : 'received'}`;
+                div.className = `message ${msg.from_role === 'agent' ? 'agent' : 'user'}`;
                 
                 let content = '';
-                if (msg.image) {
-                    content += `<img src="${escapeHtml(msg.image)}" alt="图片">`;
-                }
-                if (msg.text) {
-                    content += escapeHtml(msg.text).replace(/\n/g, '<br>');
+                if (msg.type === 'image' && msg.file) {
+                    content += `<img src="${escapeHtml(msg.file)}" alt="图片">`;
+                } else if (msg.type === 'text' && msg.content) {
+                    content += escapeHtml(msg.content).replace(/\n/g, '<br>');
                 }
                 content += `<div class="message-time">${formatTime(msg.created_at)}</div>`;
                 
@@ -353,17 +319,16 @@
                 .on('postgres_changes', 
                     { event: 'INSERT', schema: 'public', table: 'messages' }, 
                     (payload) => {
-                        if (payload.new.user_id === currentUser.id) {
+                        if (payload.new.visitor_id === currentVisitorId) {
                             const container = document.getElementById('chatMessages');
                             const div = document.createElement('div');
-                            div.className = `message ${payload.new.type === 'agent' ? 'sent' : 'received'}`;
+                            div.className = `message ${payload.new.from_role === 'agent' ? 'agent' : 'user'}`;
                             
                             let content = '';
-                            if (payload.new.image) {
-                                content += `<img src="${escapeHtml(payload.new.image)}" alt="图片">`;
-                            }
-                            if (payload.new.text) {
-                                content += escapeHtml(payload.new.text).replace(/\n/g, '<br>');
+                            if (payload.new.type === 'image' && payload.new.file) {
+                                content += `<img src="${escapeHtml(payload.new.file)}" alt="图片">`;
+                            } else if (payload.new.type === 'text' && payload.new.content) {
+                                content += escapeHtml(payload.new.content).replace(/\n/g, '<br>');
                             }
                             content += `<div class="message-time">${formatTime(payload.new.created_at)}</div>`;
                             
@@ -382,16 +347,13 @@
             const text = textOverride || input.value.trim();
             
             if (!text && !pendingImage) return;
-            if (!currentUser) {
-                alert('请先连接客服');
-                return;
-            }
             
             const { error } = await supabase.from('messages').insert({
-                user_id: currentUser.id,
-                type: 'user',
-                text: text,
-                image: pendingImage,
+                visitor_id: currentVisitorId,
+                from_role: 'visitor',
+                type: pendingImage ? 'image' : 'text',
+                content: text,
+                file: pendingImage,
                 created_at: new Date().toISOString()
             });
             
@@ -457,14 +419,22 @@
 
         // 初始化
         async function init() {
-            currentUser = await getOrCreateUser();
-            await loadConfig();
+            await getOrCreateVisitor();
             await loadMessages();
             subscribeToMessages();
             
             // 移除加载提示
             const loading = document.querySelector('.loading');
             if (loading) loading.remove();
+            
+            // 添加欢迎消息
+            const container = document.getElementById('chatMessages');
+            if (container.children.length === 0) {
+                const tip = document.createElement('div');
+                tip.className = 'system-tip';
+                tip.textContent = '当前客服在线，预计等待 1-2 分钟';
+                container.appendChild(tip);
+            }
         }
 
         // 事件监听
