@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线客服</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 420px;
+            height: 100vh;
+            height: 100dvh;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            background: linear-gradient(135deg, #1a6fc4 0%, #2b7de9 100%);
+            color: #fff;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .header-logo {
+            width: 36px; height: 36px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; overflow: hidden;
+            flex-shrink: 0;
+        }
+        .header-logo img { width: 100%; height: 100%; object-fit: cover; }
+        .header-info { flex: 1; }
+        .header-info h1 { font-size: 16px; font-weight: 600; }
+        .header-info p { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background: #f7f8fa;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .message {
+            max-width: 82%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            word-break: break-word;
+        }
+        .message.received {
+            background: #fff;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .message.sent {
+            background: linear-gradient(135deg, #1a6fc4 0%, #2b7de9 100%);
+            color: #fff;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .message img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .message-time {
+            font-size: 10px;
+            opacity: 0.6;
+            margin-top: 6px;
+            text-align: right;
+        }
+        .system-tip {
+            text-align: center;
+            padding: 8px;
+            background: rgba(43,125,233,0.08);
+            color: #2b7de9;
+            font-size: 12px;
+            border-radius: 20px;
+            margin-bottom: 8px;
+        }
+        .quick-options {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            overflow-x: auto;
+            border-top: 1px solid #eee;
+            flex-shrink: 0;
+        }
+        .quick-btn {
+            padding: 6px 14px;
+            background: #f0f7ff;
+            border: 1px solid #d4e4ff;
+            border-radius: 16px;
+            font-size: 12px;
+            color: #2b7de9;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .quick-btn:hover { background: #e0eeff; }
+        .chat-input {
+            padding: 12px;
+            background: #fff;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            flex-shrink: 0;
+        }
+        .attach-btn {
+            width: 36px;
+            height: 36px;
+            background: #f5f7fa;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .input-wrapper {
+            flex: 1;
+            background: #f5f7fa;
+            border-radius: 8px;
+            padding: 8px 12px;
+            min-height: 40px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        #messageInput {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            outline: none;
+            resize: none;
+            line-height: 1.5;
+            color: #333;
+            min-height: 20px;
+            max-height: 100px;
+        }
+        #messageInput::placeholder { color: #bbb; }
+        .send-btn {
+            width: 50px;
+            height: 36px;
+            background: linear-gradient(135deg, #1a6fc4 0%, #2b7de9 100%);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .send-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .image-preview {
+            position: relative;
+            margin-bottom: 8px;
+            display: none;
+        }
+        .image-preview.active { display: block; }
+        .image-preview img {
+            max-width: 100%;
+            max-height: 80px;
+            border-radius: 6px;
+        }
+        .image-remove {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 20px;
+            height: 20px;
+            background: rgba(0,0,0,0.6);
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        #fileInput { display: none; }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="header-logo" id="headerLogo"></div>
+            <div class="header-info">
+                <h1 id="headerTitle">银联客服</h1>
+                <p>在线时间 08:00-22:00</p>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="聊天消息">
+            <div class="loading">正在连接客服...</div>
+        </div>
+
+        <div class="quick-options">
+            <button class="quick-btn" onclick="sendQuick('交易异常')">交易异常</button>
+            <button class="quick-btn" onclick="sendQuick('查询账单')">查询账单</button>
+            <button class="quick-btn" onclick="sendQuick('挂失补办')">挂失补办</button>
+        </div>
+
+        <div class="chat-input">
+            <button class="attach-btn" onclick="document.getElementById('fileInput').click()" aria-label="发送图片">📷</button>
+            <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
+            <div class="input-wrapper">
+                <div class="image-preview" id="imagePreview">
+                    <img id="previewImg" src="" alt="">
+                    <button class="image-remove" onclick="removeImage()">✕</button>
+                </div>
+                <textarea id="messageInput" placeholder="输入文字..." rows="1"></textarea>
+            </div>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">发送</button>
+        </div>
+    </div>
+
+    <script>
+        // Supabase 配置 - 请替换为你的实际配置
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        
+        // 初始化 Supabase
+        let supabase;
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch(e) {
+            console.error('Supabase 初始化失败:', e);
+        }
+
+        let currentUser = null;
+        let pendingImage = null;
+
+        // 生成用户ID
+        function generateUserId() {
+            return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // 获取或创建用户
+        async function getOrCreateUser() {
+            let userId = localStorage.getItem('chatUserId');
+            if (!userId) {
+                userId = generateUserId();
+                localStorage.setItem('chatUserId', userId);
+            }
+            
+            // 在 Supabase 中注册
+            const { data, error } = await supabase
+                .from('users')
+                .upsert({ id: userId, name: '用户' + userId.slice(-4), status: 'online' })
+                .select()
+                .single();
+            
+            if (error) {
+                console.error('用户注册失败:', error);
+            }
+            
+            return { id: userId, name: '用户' + userId.slice(-4) };
+        }
+
+        // 加载配置
+        async function loadConfig() {
+            const { data, error } = await supabase
+                .from('config')
+                .select('key, value');
+            
+            if (error) {
+                console.error('加载配置失败:', error);
+                return;
+            }
+            
+            data.forEach(item => {
+                if (item.key === 'title') {
+                    document.getElementById('headerTitle').textContent = item.value;
+                } else if (item.key === 'logo' && item.value) {
+                    document.getElementById('headerLogo').innerHTML = `<img src="${item.value}" alt="Logo">`;
+                }
+            });
+        }
+
+        // 加载消息
+        async function loadMessages() {
+            const { data, error } = await supabase
+                .from('messages')
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .order('created_at', { ascending: true });
+            
+            if (error) {
+                console.error('加载消息失败:', error);
+                return;
+            }
+            
+            renderMessages(data || []);
+        }
+
+        // 渲染消息
+        function renderMessages(messages) {
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '';
+            
+            messages.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = `message ${msg.type === 'agent' ? 'sent' : 'received'}`;
+                
+                let content = '';
+                if (msg.image) {
+                    content += `<img src="${escapeHtml(msg.image)}" alt="图片">`;
+                }
+                if (msg.text) {
+                    content += escapeHtml(msg.text).replace(/\n/g, '<br>');
+                }
+                content += `<div class="message-time">${formatTime(msg.created_at)}</div>`;
+                
+                div.innerHTML = content;
+                container.appendChild(div);
+            });
+            
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 监听新消息
+        function subscribeToMessages() {
+            supabase
+                .channel('messages')
+                .on('postgres_changes', 
+                    { event: 'INSERT', schema: 'public', table: 'messages' }, 
+                    (payload) => {
+                        if (payload.new.user_id === currentUser.id) {
+                            const container = document.getElementById('chatMessages');
+                            const div = document.createElement('div');
+                            div.className = `message ${payload.new.type === 'agent' ? 'sent' : 'received'}`;
+                            
+                            let content = '';
+                            if (payload.new.image) {
+                                content += `<img src="${escapeHtml(payload.new.image)}" alt="图片">`;
+                            }
+                            if (payload.new.text) {
+                                content += escapeHtml(payload.new.text).replace(/\n/g, '<br>');
+                            }
+                            content += `<div class="message-time">${formatTime(payload.new.created_at)}</div>`;
+                            
+                            div.innerHTML = content;
+                            container.appendChild(div);
+                            container.scrollTop = container.scrollHeight;
+                        }
+                    }
+                )
+                .subscribe();
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            
+            if (!text && !pendingImage) return;
+            if (!currentUser) {
+                alert('请先连接客服');
+                return;
+            }
+            
+            const { error } = await supabase.from('messages').insert({
+                user_id: currentUser.id,
+                type: 'user',
+                text: text,
+                image: pendingImage,
+                created_at: new Date().toISOString()
+            });
+            
+            if (error) {
+                console.error('发送失败:', error);
+                alert('发送失败，请重试');
+                return;
+            }
+            
+            input.value = '';
+            input.style.height = 'auto';
+            removeImage();
+            document.getElementById('sendBtn').disabled = true;
+        }
+
+        // 快捷消息
+        async function sendQuick(text) {
+            await sendMessage(text);
+        }
+
+        // 处理文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (file.size > 5 * 1024 * 1024) {
+                alert('图片大小不能超过5MB');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                pendingImage = e.target.result;
+                document.getElementById('previewImg').src = pendingImage;
+                document.getElementById('imagePreview').classList.add('active');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 移除图片
+        function removeImage() {
+            pendingImage = null;
+            document.getElementById('imagePreview').classList.remove('active');
+            document.getElementById('fileInput').value = '';
+        }
+
+        // 时间格式化
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // XSS 防护
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 初始化
+        async function init() {
+            currentUser = await getOrCreateUser();
+            await loadConfig();
+            await loadMessages();
+            subscribeToMessages();
+        }
+
+        // 事件监听
+        document.getElementById('messageInput').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+            document.getElementById('sendBtn').disabled = !this.value.trim() && !pendingImage;
+        });
+
+        document.getElementById('messageInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // 启动
+        if (window.supabase) {
+            init().catch(console.error);
+        } else {
+            document.getElementById('chatMessages').innerHTML = '<div class="loading">加载聊天系统失败，请刷新重试</div>';
+        }
+    </script>
+</body>
+</html>
