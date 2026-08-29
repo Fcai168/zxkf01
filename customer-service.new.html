@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>国家金融监督管理总局</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            max-width: 100vw;
+        }
+        body {
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            background: #f0f2f5;
+            color: #1a1a1a;
+            min-height: 100vh;
+            font-size: 12px;
+        }
+        
+        /* 头部 */
+        .header {
+            background: linear-gradient(135deg, #1a5faa 0%, #2b7de9 100%);
+            color: #fff;
+            padding: 6px 0;
+            box-shadow: 0 2px 8px rgba(26,95,170,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo-img {
+            height: 32px;
+            width: auto;
+            object-fit: contain;
+            margin-top: 2px;
+        }
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: rgba(255,255,255,0.25);
+            border-radius: 15px;
+            padding: 4px 8px;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .search-box input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-size: 10px;
+            width: 100px;
+        }
+        .search-box input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+        .search-box button {
+            background: transparent;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .site-title h1 {
+            font-size: 20px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .site-title p {
+            font-size: 8px;
+            opacity: 0.85;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: rgba(255,255,255,0.25);
+            border-radius: 15px;
+            padding: 3px 8px;
+            gap: 4px;
+        }
+        .search-box input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-size: 10px;
+            width: 100px;
+        }
+        .search-box input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+        .search-box button {
+            background: transparent;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        /* 导航栏 */
+        .nav {
+            background: linear-gradient(180deg, #2b7de9 0%, #1a6fc4 100%);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 42px;
+            z-index: 99;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 4px;
+            display: flex;
+            min-width: max-content;
+        }
+        .nav-item {
+            padding: 5px 8px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 500;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.15); }
+        .nav-item.online-service:hover { background: rgba(255,255,255,0.15); }
+        
+        /* 轮播图 */
+        .carousel {
+            max-width: 1200px;
+            margin: 8px auto;
+            padding: 0 8px;
+            position: relative;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .carousel-inner {
+            position: relative;
+            height: 200px;
+        }
+        .carousel-item {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            background-size: cover;
+            background-position: center;
+        }
+        .carousel-item.active { opacity: 1; }
+        .carousel-item:nth-child(1) { 
+            background-image: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.6)), url('/images/upload_20260830_053243_2.png');
+        }
+        .carousel-item:nth-child(2) { 
+            background-image: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.6)), url('/images/upload_20260830_054217_3.png');
+        }
+        .carousel-caption {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+        .carousel-indicators {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+        }
+        .carousel-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .carousel-dot.active {
+            background: #fff;
+            width: 16px;
+            border-radius: 3px;
+        }
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .carousel:hover .carousel-btn { opacity: 1; }
+        .carousel-btn.prev { left: 8px; }
+        .carousel-btn.next { right: 8px; }
+        
+        /* 主内容区 */
+        .main {
+            max-width: 1200px;
+            margin: 8px auto;
+            padding: 0 8px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 8px;
+        }
+        
+        /* 新闻列表 */
+        .news-list {
+            background: #fff;
+            border-radius: 4px;
+            padding: 6px 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .news-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid #e8eaed;
+            margin-bottom: 4px;
+        }
+        .news-tab {
+            padding: 3px 6px;
+            font-size: 10px;
+            color: #65676b;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+        .news-tab:hover { color: #1a6fc4; }
+        .news-tab.active {
+            color: #1a6fc4;
+            border-bottom-color: #1a6fc4;
+            font-weight: 600;
+        }
+        .news-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #f0f2f5;
+            display: flex;
+            align-items: center;
+        }
+        .news-item:last-child { border-bottom: none; }
+        .news-item a {
+            color: #1c1e21;
+            text-decoration: none;
+            font-size: 11px;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .news-item a:hover { color: #1a6fc4; }
+        .news-more {
+            text-align: right;
+            padding-top: 4px;
+            font-size: 10px;
+        }
+        .news-more a { color: #1a6fc4; text-decoration: none; font-weight: 500; }
+        
+        /* 右侧 */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .sidebar-box {
+            background: #fff;
+            border-radius: 4px;
+            padding: 6px 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .sidebar-box h3 {
+            font-size: 10px;
+            color: #1a6fc4;
+            margin-bottom: 3px;
+            padding-bottom: 2px;
+            border-bottom: 1px solid #1a6fc4;
+            font-weight: 600;
+        }
+        .stat-item {
+            padding: 3px 0;
+            border-bottom: 1px solid #f0f2f5;
+            font-size: 9px;
+        }
+        .stat-item:last-child { border-bottom: none; }
+        .stat-item a { 
+            color: #333; 
+            text-decoration: none; 
+            display: block; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap;
+        }
+        .stat-item a:hover { color: #1a6fc4; }
+        
+        /* 底部服务 */
+        .footer-services {
+            background: #e8f4fd;
+            padding: 8px 0;
+        }
+        .footer-services-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 8px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+        .service-item { 
+            text-align: center;
+            padding: 4px;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+        .service-icon {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #1a6fc4 0%, #2b7de9 100%);
+            border-radius: 50%;
+            margin: 0 auto 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 9px;
+        }
+        .service-item h4 { 
+            font-size: 8px; 
+            color: #1a1a1a; 
+            margin-bottom: 1px; 
+        }
+        .service-item p { 
+            font-size: 7px; 
+            color: #65676b; 
+        }
+        
+        /* 底部版权 */
+        .footer {
+            background: #2c3e50;
+            color: #fff;
+            padding: 8px 0;
+        }
+        .footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 8px;
+        }
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 3px;
+        }
+        .footer-links a { 
+            color: rgba(255,255,255,0.85); 
+            text-decoration: none; 
+            font-size: 9px;
+        }
+        .footer-links a:hover { color: #fff; }
+        .footer-info {
+            text-align: center;
+            font-size: 8px;
+            color: rgba(255,255,255,0.7);
+            line-height: 1.4;
+        }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .main { grid-template-columns: 1fr; gap: 6px; }
+            .carousel-inner { height: 120px; }
+            .footer-services-inner { grid-template-columns: repeat(2, 1fr); }
+            .nav-item { padding: 4px 6px; font-size: 9px; }
+            .site-title h1 { font-size: 14px; }
+            .site-title p { font-size: 6px; }
+            .logo-img { height: 28px; }
+            .header { padding: 5px 0; }
+            .nav { top: 38px; }
+            .header-right { display: none; }
+        }
+        
+        @media (max-width: 480px) {
+            .footer-services-inner { grid-template-columns: repeat(2, 1fr); }
+            .carousel-inner { height: 100px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 头部 -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="header-left">
+                <img src="/images/upload_20260830_052621_1.png" alt="国家金融监督管理总局" class="logo-img">
+                <form class="search-box" role="search" aria-label="站内搜索">
+                    <input type="text" placeholder="搜索..." aria-label="搜索关键词">
+                    <button type="submit" aria-label="搜索">🔍</button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <!-- 导航栏 -->
+    <nav class="nav" role="navigation" aria-label="主导航">
+        <div class="nav-inner">
+            <a href="#" class="nav-item">首页</a>
+            <a href="#" class="nav-item">机构概况</a>
+            <a href="#" class="nav-item">新闻资讯</a>
+            <a href="#" class="nav-item">政务信息</a>
+            <a href="#" class="nav-item online-service" onclick="startChat(); return false;">在线服务</a>
+            <a href="#" class="nav-item">互动交流</a>
+            <a href="#" class="nav-item">统计数据</a>
+            <a href="#" class="nav-item">专题专栏</a>
+        </div>
+    </nav>
+
+    <!-- 轮播图 -->
+    <div class="carousel" role="region" aria-label="轮播图">
+        <div class="carousel-inner">
+            <div class="carousel-item active"></div>
+            <div class="carousel-item"></div>
+        </div>
+        <button class="carousel-btn prev" onclick="prevSlide()" aria-label="上一张">‹</button>
+        <button class="carousel-btn next" onclick="nextSlide()" aria-label="下一张">›</button>
+        <div class="carousel-indicators">
+            <span class="carousel-dot active" onclick="goToSlide(0)"></span>
+            <span class="carousel-dot" onclick="goToSlide(1)"></span>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <main class="main">
+        <!-- 左侧新闻 -->
+        <section class="news-list" aria-label="新闻列表">
+            <div class="news-tabs">
+                <div class="news-tab active">时政要闻</div>
+                <div class="news-tab">国务院信息</div>
+                <div class="news-tab">总局监管动态</div>
+            </div>
+            <div class="news-content">
+                <div class="news-item">
+                    <a href="#">国家金融监督管理总局有关司局负责人就发布房地产相关融资...</a>
+                </div>
+                <div class="news-item">
+                    <a href="#">丁向群会见东亚银行有限公司联席行政总裁李民斌</a>
+                </div>
+                <div class="news-item">
+                    <a href="#">财政部、金融监管总局有关部门负责人就印发《会计师事务所...</a>
+                </div>
+                <div class="news-item">
+                    <a href="#">西藏日喀则市吉隆县遭受泥石流灾害金融监管总局启动保险业...</a>
+                </div>
+                <div class="news-item">
+                    <a href="#">金融监管总局党委书记、局长丁向群带队赴吉林调研</a>
+                </div>
+                <div class="news-item">
+                    <a href="#">国家金融监督管理总局有关司局就《保险公司资产负债管理办...</a>
+                </div>
+            </div>
+            <div class="news-more">
+                <a href="#">更多&gt;&gt;</a>
+            </div>
+        </section>
+
+        <!-- 右侧边栏 -->
+        <aside class="sidebar" aria-label="侧边栏">
+            <div class="sidebar-box">
+                <h3>公告通知</h3>
+                <div class="stat-item"><a href="#">国家金融监督管理总局就《行政复议办法》</a></div>
+                <div class="stat-item"><a href="#">外国商务人士在华工作生活指引（2026年版）</a></div>
+                <div class="stat-item"><a href="#">关于做好近期防汛抗洪和灾后恢复...</a></div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- 底部服务 -->
+    <section class="footer-services" aria-label="服务入口">
+        <div class="footer-services-inner">
+            <div class="service-item">
+                <div class="service-icon">📞</div>
+                <h4>政务咨询</h4>
+                <p>010-81911114</p>
+            </div>
+            <div class="service-item">
+                <div class="service-icon">📋</div>
+                <h4>信访咨询</h4>
+                <p>010-81911234</p>
+            </div>
+            <div class="service-item">
+                <div class="service-icon">💬</div>
+                <h4>在线客服</h4>
+                <p>8:30-17:30</p>
+            </div>
+            <div class="service-item">
+                <div class="service-icon">📧</div>
+                <h4>纪检监察</h4>
+                <p>010-81911315</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 底部版权 -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-links">
+                <a href="#">关于我们</a>
+                <a href="#">联系方式</a>
+                <a href="#">网站地图</a>
+                <a href="#">网站声明</a>
+                <a href="#">隐私政策</a>
+            </div>
+            <div class="footer-info">
+                <p>国家金融监督管理总局版权所有</p>
+                <p>地址：北京市西城区金融大街15号</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function startChat() {
+            window.location.href = 'chat-fullscreen.new.html';
+        }
+        
+        // 轮播图功能
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.carousel-item');
+        const dots = document.querySelectorAll('.carousel-dot');
+        
+        function goToSlide(index) {
+            slides[currentSlide].classList.remove('active');
+            dots[currentSlide].classList.remove('active');
+            currentSlide = index;
+            slides[currentSlide].classList.add('active');
+            dots[currentSlide].classList.add('active');
+        }
+        
+        function nextSlide() {
+            goToSlide((currentSlide + 1) % slides.length);
+        }
+        
+        function prevSlide() {
+            goToSlide((currentSlide - 1 + slides.length) % slides.length);
+        }
+        
+        // 自动播放
+        setInterval(nextSlide, 4000);
+        
+        // 新闻标签切换
+        document.querySelectorAll('.news-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.news-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
