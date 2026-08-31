@@ -503,7 +503,7 @@
     <div class="login-overlay" id="loginOverlay">
         <div class="login-box">
             <h2>🛠️ 客服后台</h2>
-            <p class="subtitle">国家金融监督管理总局</p>
+            <p class="subtitle">在线客服系统</p>
             <input type="password" id="passwordInput" placeholder="请输入管理密码" autocomplete="current-password">
             <button onclick="checkPassword()">登录</button>
         </div>
@@ -626,13 +626,18 @@
         });
 
         // 手机键盘弹起时上移登录框，避免"登录"按钮被键盘挡住
+        // ⚠️ blur必须延迟：点按钮瞬间失焦若立刻跳回，按钮会跑掉导致点不中
         (function() {
             var pw = document.getElementById('passwordInput');
             pw.addEventListener('focus', function() {
                 document.querySelector('.login-box').classList.add('keypad-up');
             });
             pw.addEventListener('blur', function() {
-                document.querySelector('.login-box').classList.remove('keypad-up');
+                setTimeout(function() {
+                    if (document.activeElement !== pw) {
+                        document.querySelector('.login-box').classList.remove('keypad-up');
+                    }
+                }, 250);
             });
         })();
 
