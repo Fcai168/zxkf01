@@ -36,10 +36,7 @@
             width: 88%;
             max-width: 320px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-            transition: transform 0.2s ease;
         }
-        /* 手机键盘弹起时，登录框上移，避免按钮被键盘遮挡 */
-        .login-box.keypad-up { transform: translateY(-28vh); }
         .login-box h2 {
             font-size: 20px;
             margin-bottom: 6px;
@@ -594,47 +591,20 @@
         const ADMIN_PASSWORD = 'admin123';
         
         function checkPassword() {
-            const input = document.getElementById('passwordInput');
-            const val = (input.value || '').trim();
-            if (!val) {
-                alert('请先输入密码');
-                input.focus();
-                return;
-            }
-            if (val === ADMIN_PASSWORD) {
+            const input = document.getElementById('passwordInput').value;
+            if (input === ADMIN_PASSWORD) {
                 sessionStorage.setItem('adminAuthenticated', 'true');
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('mainInterface').style.display = 'flex';
-                showLoginToast('✅ 登录成功，正在加载数据...');
                 initApp();
             } else {
                 alert('密码错误，请重试');
             }
         }
-
-        // 登录成功提示（3秒后消失，让用户明确知道按钮有反应）
-        function showLoginToast(msg) {
-            const t = document.createElement('div');
-            t.textContent = msg;
-            t.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#1a6fc4;color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.25);';
-            document.body.appendChild(t);
-            setTimeout(() => t.remove(), 3000);
-        }
         
         document.getElementById('passwordInput').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') checkPassword();
         });
-
-        // 手机键盘弹起时上移登录框，避免"登录"按钮被键盘挡住
-        (function() {
-            var pw = document.getElementById('passwordInput');
-            pw.addEventListener('focus', function() {
-                document.querySelector('.login-box').classList.add('keypad-up');
-            });
-            pw.addEventListener('blur', function() {
-                document.querySelector('.login-box').classList.remove('keypad-up');
-            });
-        })();
 
         // ===== Supabase 数据层（跨设备同步）=====
         const SUPABASE_URL = 'https://qafwjrfozumfzhrbtuue.supabase.co';
