@@ -505,7 +505,9 @@
             <h2>🛠️ 客服后台</h2>
             <p class="subtitle">在线客服系统</p>
             <input type="password" id="passwordInput" placeholder="请输入管理密码" autocomplete="current-password">
-            <button onclick="checkPassword()">登录</button>
+            <button onclick="loginClick(event)">登录</button>
+            <p id="diagBox" style="font-size:11px;color:#888;margin-top:8px;word-break:break-all;"></p>
+            <p style="font-size:10px;color:#ccc;">版本 v6-blur</p>
         </div>
     </div>
 
@@ -592,7 +594,32 @@
 
     <script>
         const ADMIN_PASSWORD = 'admin123';
-        
+
+        // ===== 诊断灯：把出错信息直接显示在页面上 =====
+        function diag(msg) {
+            try {
+                var d = document.getElementById('diagBox');
+                if (d) d.textContent = msg;
+                console.log('[DIAG]', msg);
+            } catch(e) {}
+        }
+        window.addEventListener('error', function(e) {
+            diag('⚠️ JS出错: ' + e.message + ' @行' + e.lineno);
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+            diag('⚠️ Promise拒绝: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+        });
+        diag('✅ v6加载正常，脚本执行中...');
+
+        function loginClick(ev) {
+            try {
+                diag('👆 点到了登录按钮，开始校验...');
+                checkPassword();
+            } catch(e) {
+                diag('❌ 登录函数出错: ' + e.message);
+            }
+        }
+
         function checkPassword() {
             const input = document.getElementById('passwordInput');
             const val = (input.value || '').trim();
