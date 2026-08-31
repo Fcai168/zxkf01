@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>在线客服</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -473,7 +474,22 @@
 
         // 启动
         if (window.supabase) {
-            init().catch(console.error);
+            init().catch(err => {
+                console.error('初始化失败:', err);
+                const loading = document.querySelector('.loading');
+                if (loading) {
+                    loading.textContent = '连接失败，请下拉刷新重试';
+                    loading.style.color = '#cc1126';
+                }
+            });
+            // 15秒保险：若加载提示仍未消失，提示用户重试
+            setTimeout(() => {
+                const loading = document.querySelector('.loading');
+                if (loading) {
+                    loading.innerHTML = '连接较慢，可点按钮刷新重试<br><button style="margin-top:12px;padding:8px 20px;border:none;border-radius:16px;background:#1a6fc4;color:#fff" onclick="location.reload()">刷新重试</button>';
+                    loading.style.color = '#666';
+                }
+            }, 15000);
         } else {
             document.getElementById('chatMessages').innerHTML = '<div class="loading">加载聊天系统失败，请刷新重试</div>';
         }
