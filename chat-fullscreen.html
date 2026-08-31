@@ -387,8 +387,8 @@
             }
             
             const reader = new FileReader();
-            reader.onload = function(e) {
-                pendingImage = e.target.result;
+            reader.onload = async function(e) {
+                pendingImage = await compressImage(e.target.result, 900, 0.7);
                 document.getElementById('previewImg').src = pendingImage;
                 document.getElementById('imagePreview').classList.add('active');
             };
@@ -415,6 +415,23 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // 图片压缩（存库前压到900px，避免数据库存5MB原图）
+        function compressImage(dataUrl, maxW, quality) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => {
+                    const scale = Math.min(1, maxW / img.width);
+                    const c = document.createElement('canvas');
+                    c.width = Math.round(img.width * scale);
+                    c.height = Math.round(img.height * scale);
+                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                    resolve(c.toDataURL('image/jpeg', quality));
+                };
+                img.onerror = () => resolve(dataUrl);
+                img.src = dataUrl;
+            });
         }
 
         // 初始化
