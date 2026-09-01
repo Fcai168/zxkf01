@@ -248,9 +248,9 @@
         const SUPABASE_URL = 'https://qafwjrfozumfzhrbtuue.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhZndqcmZvenVtZnpocmJ0dXVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NDk0NjQsImV4cCI6MjEwMTUyNTQ2NH0.vztS1Ar2ec9bnWuhdVUS76dF04PnJjDWBVnWZKuOB4I';
         
-        let supabase;
+        let sb;
         try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         } catch(e) {
             console.error('Supabase 初始化失败:', e);
         }
@@ -275,7 +275,7 @@
 
         // 加载消息
         async function loadMessages() {
-            const { data, error } = await supabase
+            const { data, error } = await sb
                 .from('messages')
                 .select('*')
                 .eq('visitor_id', currentVisitorId)
@@ -315,7 +315,7 @@
 
         // 监听新消息
         function subscribeToMessages() {
-            supabase
+            sb
                 .channel('messages')
                 .on('postgres_changes', 
                     { event: 'INSERT', schema: 'public', table: 'messages' }, 
@@ -350,7 +350,7 @@
             if (!text && !pendingImage) return;
             
             const msgId = 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-            const { error } = await supabase.from('messages').insert({
+            const { error } = await sb.from('messages').insert({
                 id: msgId,
                 visitor_id: currentVisitorId,
                 from_role: 'visitor',
