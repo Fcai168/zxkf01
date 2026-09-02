@@ -640,8 +640,7 @@
                     try {
                         sb.from('typing_status').upsert({
                             visitor_id: currentVisitorId,
-                            text: this.value,
-                            created_at: new Date().toISOString()
+                            text: this.value
                         }).catch(e => console.warn('打字上报失败:', e));
                     } catch(e) { console.warn('打字上报异常:', e); }
                 }, 500);
