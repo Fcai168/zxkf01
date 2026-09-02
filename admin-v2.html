@@ -1045,10 +1045,14 @@
         }
 
         let typingCheckTimer = null;
+        let userListTimer = null;
         
         function startListening() {
-            // 每2秒检查一次打字状态
+            // 清理旧定时器
             if (typingCheckTimer) clearInterval(typingCheckTimer);
+            if (userListTimer) clearInterval(userListTimer);
+            
+            // 每2秒检查一次打字状态
             typingCheckTimer = setInterval(() => {
                 if (!currentUser) return;
                 sb.from('typing_status')
@@ -1063,7 +1067,8 @@
             
             // 每3秒刷新用户列表（发现新访客）；选中访客的消息走 Supabase 实时推送
             renderUserList();
-            setInterval(renderUserList, 3000);
+            userListTimer = setInterval(renderUserList, 3000);
+            
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') renderUserList();
             });
