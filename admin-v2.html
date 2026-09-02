@@ -960,35 +960,9 @@
             document.getElementById('chatStatus').textContent = currentUser.status === 'online' ? '在线' : '离线';
             renderUserList();
             await renderChat();
-            // 订阅该访客的实时消息
-            if (agentChannel) agentChannel.unsubscribe();
-            // 监听该访客的打字状态
-            sb.from('typing_status')
-                .select('text, created_at')
-                .eq('visitor_id', userId)
-                .gt('created_at', new Date(Date.now() - 5000).toISOString())
-                .order('created_at', {ascending: false})
-                .limit(1)
-                .then(({ data }) => {
-                    const indicator = document.getElementById('typingIndicator');
-                    if (data && data.length > 0) {
-                        indicator.textContent = '访客正在输入: ' + escapeHtml(data[0].text);
-                        indicator.style.display = 'block';
-                    } else {
-                        indicator.style.display = 'none';
-                    }
-                });
             
-            // 订阅打字状态（每2秒轮询）
-            sb.from('typing_status')
-                .select('text, created_at')
-                .eq('visitor_id', userId)
-                .gt('created_at', new Date(Date.now() - 5000).toISOString())
-                .order('created_at', {ascending: false})
-                .limit(1)
-                .then(({ data }) => {
-                    updateTypingIndicator(userId, data);
-                });
+            // 立即查询一次打字状态
+            checkTypingStatus(userId);
             
             // 使用轮询替代Realtime订阅（避免端点404问题）
             if (window.messagePollTimers) {
@@ -1013,6 +987,28 @@
                     if (g) g.unread = visitorMsgs.length;
                     
                     // 如果当前选中的是这个用户，刷新聊天
+                    if (currentUser && currentUser.id === userId) {
+                        renderChat();
+                    }
+                    
+                    renderUserList();
+                } catch(e) {
+                    console.warn('检查新消息失败:', e);
+                }
+            }, 2000);
+        }
+        
+        // 独立的打字状态查询函数
+        function checkTypingStatus(userId) {
+            sb.from('typing_status')
+                .select('text, created_at')
+                .eq('visitor_id', userId)
+                .gte('created_at', new Date(Date.now() - 60000).toISOString())
+                .order('created_at', {ascending: false})
+                .limit(1)
+                .then(({ data }) => updateTypingIndicator(userId, data))
+                .catch(e => console.warn('打字状态查询失败:', e));
+        }
                     if (currentUser && currentUser.id === userId) {
                         renderChat();
                     }
