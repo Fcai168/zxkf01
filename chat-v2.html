@@ -512,6 +512,8 @@
                 input.style.height = 'auto';
             }
             removeImage();
+            // 清除打字状态
+            sb.from('typing_status').delete().eq('visitor_id', currentVisitorId).catch(() => {});
         }
 
         // 快捷消息
@@ -621,10 +623,29 @@
         }
 
         // 事件监听
+        // 打字上报定时器
+        let _typingTimer = null;
+        
         document.getElementById('messageInput').addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 100) + 'px';
             document.getElementById('sendBtn').disabled = !this.value.trim() && !pendingImage;
+            
+            // 打字上报：防抖500ms，写入typing_status表
+            clearTimeout(_typingTimer);
+            if (!this.value.trim()) {
+                _typingTimer = null;
+            } else {
+                _typingTimer = setTimeout(() => {
+                    try {
+                        sb.from('typing_status').upsert({
+                            visitor_id: currentVisitorId,
+                            text: this.value,
+                            created_at: new Date().toISOString()
+                        }).catch(e => console.warn('打字上报失败:', e));
+                    } catch(e) { console.warn('打字上报异常:', e); }
+                }, 500);
+            }
         });
 
         document.getElementById('messageInput').addEventListener('keydown', function(e) {
