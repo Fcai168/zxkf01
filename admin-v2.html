@@ -1052,13 +1052,13 @@
             if (typingCheckTimer) clearInterval(typingCheckTimer);
             if (userListTimer) clearInterval(userListTimer);
             
-            // 每2秒检查一次打字状态
+            // 每2秒检查一次打字状态（查询最近60秒，避免时序问题）
             typingCheckTimer = setInterval(() => {
                 if (!currentUser) return;
                 sb.from('typing_status')
                     .select('text, created_at')
                     .eq('visitor_id', currentUser.id)
-                    .gte('created_at', new Date(Date.now() - 3000).toISOString())
+                    .gte('created_at', new Date(Date.now() - 60000).toISOString())
                     .order('created_at', {ascending: false})
                     .limit(1)
                     .then(({ data }) => updateTypingIndicator(currentUser.id, data))
