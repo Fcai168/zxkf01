@@ -945,7 +945,7 @@
             }
         }
 
-        let agentChannel = null;
+        // agentChannel已改为轮询方式
         function msgHtml(m) {
             const cls = m.from_role === 'agent' ? 'agent' : 'user';
             const pic = m.type === 'image' && m.file ? `<img src="${escapeHtml(m.file)}" alt="图片">` : '';
@@ -990,21 +990,38 @@
                     updateTypingIndicator(userId, data);
                 });
             
-            agentChannel = sb.channel('admin-' + userId)
-                .on('postgres_changes', {event: 'INSERT', schema: 'public', table: 'messages'}, async (payload) => {
-                    const m = payload.new;
-                    if (m.visitor_id !== userId) return;
-                    if (m.from_role === 'visitor') {
-                        const g = users.find(u => u.id === userId);
-                        if (g) g.unread++;
-                    }
+            // 使用轮询替代Realtime订阅（避免端点404问题）
+            if (window.messagePollTimers) {
+                clearInterval(window.messagePollTimers[userId]);
+            }
+            window.messagePollTimers = window.messagePollTimers || {};
+            
+            window.messagePollTimers[userId] = setInterval(async () => {
+                try {
+                    const { data } = await sb
+                        .from('messages')
+                        .select('*')
+                        .eq('visitor_id', userId)
+                        .order('created_at', {ascending: false})
+                        .limit(10);
+                    
+                    if (!data || data.length === 0) return;
+                    
+                    // 更新未读数
+                    const visitorMsgs = data.filter(m => m.from_role === 'visitor' && m.status !== 'read');
+                    const g = users.find(u => u.id === userId);
+                    if (g) g.unread = visitorMsgs.length;
+                    
+                    // 如果当前选中的是这个用户，刷新聊天
                     if (currentUser && currentUser.id === userId) {
-                        const container = document.getElementById('chatMessages');
-                        container.insertAdjacentHTML('beforeend', msgHtml(m));
-                        container.scrollTop = container.scrollHeight;
+                        renderChat();
                     }
+                    
                     renderUserList();
-                }).subscribe();
+                } catch(e) {
+                    console.warn('检查新消息失败:', e);
+                }
+            }, 2000);
         }
 
         async function renderChat() {
