@@ -1044,7 +1044,23 @@
             }
         }
 
+        let typingCheckTimer = null;
+        
         function startListening() {
+            // 每2秒检查一次打字状态
+            if (typingCheckTimer) clearInterval(typingCheckTimer);
+            typingCheckTimer = setInterval(() => {
+                if (!currentUser) return;
+                sb.from('typing_status')
+                    .select('text, created_at')
+                    .eq('visitor_id', currentUser.id)
+                    .gte('created_at', new Date(Date.now() - 3000).toISOString())
+                    .order('created_at', {ascending: false})
+                    .limit(1)
+                    .then(({ data }) => updateTypingIndicator(currentUser.id, data))
+                    .catch(e => console.warn('打字状态检查失败:', e));
+            }, 2000);
+            
             // 每3秒刷新用户列表（发现新访客）；选中访客的消息走 Supabase 实时推送
             renderUserList();
             setInterval(renderUserList, 3000);
@@ -1067,12 +1083,7 @@
         async function doAgentSend(text, btn) {
             try {
                 let file = agentImage;
-                if (file) file = await compressImage(file, 900, 0.7);
-                // 压缩失败时拒绝入库
-                if (file === null || file === undefined) {
-                    alert('图片压缩失败，请换一张试试');
-                    return;
-                }
+                // 选图时已压缩，直接使用
                 const msgId = 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
                 const { error } = await sb.from('messages').insert({
                     id: msgId,
@@ -1097,7 +1108,7 @@
             }
         }
 
-        function handleAgentFile(e) {
+        async function handleAgentFile(e) {
             const file = e.target.files[0];
             if (!file) return;
             
@@ -1107,9 +1118,16 @@
             }
             
             const reader = new FileReader();
-            reader.onload = function(ev) {
-                agentImage = ev.target.result;
-                document.getElementById('agentPreviewImg').src = agentImage;
+            reader.onload = async function(ev) {
+                const dataUrl = ev.target.result;
+                // 立即压缩图片
+                const compressed = await compressImage(dataUrl, 900, 0.7);
+                if (!compressed) {
+                    alert('图片处理失败，请换一张试试');
+                    return;
+                }
+                agentImage = compressed;
+                document.getElementById('agentPreviewImg').src = compressed;
                 document.getElementById('agentImgPreview').classList.add('active');
             };
             reader.onerror = function() {
