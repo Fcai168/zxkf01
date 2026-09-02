@@ -445,33 +445,64 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // 监听新消息
-        function subscribeToMessages() {
-            sb
-                .channel('messages')
-                .on('postgres_changes', 
-                    { event: 'INSERT', schema: 'public', table: 'messages' }, 
-                    (payload) => {
-                        if (payload.new.visitor_id === currentVisitorId) {
-                            const container = document.getElementById('chatMessages');
-                            const div = document.createElement('div');
-                            div.className = `message ${payload.new.from_role === 'agent' ? 'agent' : 'user'}`;
-                            
-                            let content = '';
-                            if (payload.new.type === 'image' && payload.new.file) {
-                                content += `<img src="${escapeHtml(payload.new.file)}" alt="图片">`;
-                            } else if (payload.new.type === 'text' && payload.new.content) {
-                                content += escapeHtml(payload.new.content).replace(/\n/g, '<br>');
-                            }
-                            content += `<div class="message-time">${formatTime(payload.new.created_at)}</div>`;
-                            
-                            div.innerHTML = content;
-                            container.appendChild(div);
-                            container.scrollTop = container.scrollHeight;
+        // 消息轮询（替代Realtime，避免端点404问题）
+        let messagePollTimer = null;
+        
+        function startMessagePoll() {
+            // 记录最后一条消息的时间戳
+            let lastMsgTime = null;
+            
+            // 立即检查一次
+            checkNewMessages();
+            
+            // 每2秒检查一次
+            messagePollTimer = setInterval(checkNewMessages, 2000);
+            
+            async function checkNewMessages() {
+                try {
+                    const { data, error } = await sb
+                        .from('messages')
+                        .select('*')
+                        .eq('visitor_id', currentVisitorId)
+                        .order('created_at', {ascending: false})
+                        .limit(5);
+                    
+                    if (error || !data || data.length === 0) return;
+                    
+                    // 找到最新的一条
+                    const newest = data[0];
+                    if (lastMsgTime && newest.created_at <= lastMsgTime) return;
+                    
+                    lastMsgTime = newest.created_at;
+                    
+                    // 只追加新消息
+                    const container = document.getElementById('chatMessages');
+                    const existingIds = Array.from(container.querySelectorAll('.message')).map(el => el.dataset.msgId);
+                    
+                    for (const msg of data) {
+                        if (existingIds.includes(msg.id)) continue;
+                        
+                        const div = document.createElement('div');
+                        div.className = `message ${msg.from_role === 'agent' ? 'agent' : 'user'}`;
+                        div.dataset.msgId = msg.id;
+                        
+                        let content = '';
+                        if (msg.type === 'image' && msg.file) {
+                            content += `<img src="${escapeHtml(msg.file)}" alt="图片">`;
+                        } else if (msg.type === 'text' && msg.content) {
+                            content += escapeHtml(msg.content).replace(/\n/g, '<br>');
                         }
+                        content += `<div class="message-time">${formatTime(msg.created_at)}</div>`;
+                        
+                        div.innerHTML = content;
+                        container.appendChild(div);
                     }
-                )
-                .subscribe();
+                    
+                    container.scrollTop = container.scrollHeight;
+                } catch(e) {
+                    console.warn('检查新消息失败:', e);
+                }
+            }
         }
 
         // 发送消息
@@ -606,7 +637,7 @@
         async function init() {
             await getOrCreateVisitor();
             await loadMessages();
-            subscribeToMessages();
+            startMessagePoll();
             
             // 移除加载提示
             const loading = document.querySelector('.loading');
