@@ -436,19 +436,33 @@
             height: 44px;
             background: linear-gradient(135deg, #1a6fc4 0%, #2b7de9 100%);
             border: none; 
-            border-radius: 8px; 
+            border-radius: 12px;
             color: #fff;
-            font-size: 12px; 
+            font-size: 13px; 
             font-weight: 600;
             cursor: pointer;
             flex-shrink: 0;
-            box-shadow: 0 2px 6px rgba(43,125,233,0.3);
-            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(43,125,233,0.3);
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
         }
-        .send-btn:active:not(:disabled) { transform: scale(0.95); }
+        .send-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(43,125,233,0.4);
+        }
+        .send-btn:active:not(:disabled) {
+            transform: translateY(0) scale(0.98);
+            background: linear-gradient(135deg, #155a9e 0%, #2468c4 100%);
+        }
+        .send-btn:focus-visible {
+            outline: 2px solid #1a6fc4;
+            outline-offset: 2px;
+        }
         .send-btn:disabled { 
             background: #c9d4e2; 
             box-shadow: none;
+            cursor: not-allowed;
+        }
             cursor: not-allowed;
         }
         
