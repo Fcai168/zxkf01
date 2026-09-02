@@ -1009,16 +1009,6 @@
                 .then(({ data }) => updateTypingIndicator(userId, data))
                 .catch(e => console.warn('打字状态查询失败:', e));
         }
-                    if (currentUser && currentUser.id === userId) {
-                        renderChat();
-                    }
-                    
-                    renderUserList();
-                } catch(e) {
-                    console.warn('检查新消息失败:', e);
-                }
-            }, 2000);
-        }
 
         async function renderChat() {
             const container = document.getElementById('chatMessages');
