@@ -358,12 +358,13 @@
         .msg { 
             max-width: 85%; 
             padding: 8px 11px;
-            border-radius: 12px; 
-            font-size: 13px; 
+            border-radius: 12px;
+            font-size: 13px;
             line-height: 1.5;
             word-break: break-word;
-            animation: msgIn 0.2s ease;
+            /* 默认不播放弹跳动画（刷新/轮询重渲染不跳动），新消息加.msg-new */
         }
+        .msg.msg-new { animation: msgIn 0.2s ease; }
         @keyframes msgIn {
             from { opacity: 0; transform: translateY(5px); }
             to { opacity: 1; transform: translateY(0); }
@@ -1074,24 +1075,39 @@
             
             window.messagePollTimers[userId] = setInterval(async () => {
                 try {
-                    // 只查轻字段（算未读数用），图片在renderChat里按需查
+                    // 只查轻字段（算未读数+发现新消息），图片在renderChat里按需查
                     const { data } = await sb
                         .from('messages')
-                        .select('id, from_role, status, created_at')
+                        .select('id, from_role, content, file, type, status, created_at')
                         .eq('visitor_id', userId)
                         .order('created_at', {ascending: false})
-                        .limit(10);
-                    
+                        .limit(100);
+
                     if (!data || data.length === 0) return;
-                    
+                    data.reverse(); // 升序用于渲染追加
+
                     // 更新未读数
                     const visitorMsgs = data.filter(m => m.from_role === 'visitor' && m.status !== 'read');
                     const g = users.find(u => u.id === userId);
                     if (g) g.unread = visitorMsgs.length;
-                    
-                    // 如果当前选中的是这个用户，刷新聊天
+
+                    // 如果当前选中的是这个用户：只追加新消息，没有新消息就啥也不干（防跳动）
                     if (currentUser && currentUser.id === userId) {
-                        renderChat();
+                        if (!chatKnownIds || chatKnownIds.size === 0) {
+                            // 首次轮询尚未建立ID集合（比如renderChat失败过），全量补一次
+                            chatKnownIds = new Set(data.map(m => m.id));
+                        } else {
+                            const fresh = data.filter(m => !chatKnownIds.has(m.id));
+                            if (fresh.length > 0) {
+                                const container = document.getElementById('chatMessages');
+                                const old = container.querySelector('.empty-tip');
+                                if (old) old.remove();
+                                container.insertAdjacentHTML('beforeend', fresh.map(msgHtml).join('')
+                                    .replace(/class="msg /g, 'class="msg msg-new '));
+                                fresh.forEach(m => chatKnownIds.add(m.id));
+                                container.scrollTop = container.scrollHeight;
+                            }
+                        }
                     }
                     
                     renderUserList();
@@ -1126,6 +1142,7 @@
                 container.innerHTML = (msgs || []).length
                     ? msgs.map(msgHtml).join('')
                     : '<div class="empty-tip">暂无消息</div>';
+                chatKnownIds = new Set((msgs || []).map(m => m.id)); // 记录已渲染ID，轮询只追加新消息
                 // 标记访客消息为已读
                 const unread = (msgs || []).filter(m => m.from_role === 'visitor' && m.status !== 'read').map(m => m.id);
                 if (unread.length) await sb.from('messages').update({status: 'read'}).in('id', unread);
@@ -1159,6 +1176,7 @@
         let knownMsgIds = null; // 已见过的访客消息ID集合，null=首次加载
         let userListSeq = 0; // 用户列表渲染序号（竞态保护：只丢弃被更新的列表请求顶掉的结果）
         let chatSeq = 0;     // 聊天渲染序号（切换用户时丢弃旧用户的过期结果）
+        let chatKnownIds = null; // 当前会话已渲染的消息ID集合：轮询比对用，没新消息不重渲染（防跳动）
 
         // 新消息横幅提示（点击直接跳到该访客）
         function showNewMsgBanner(visitorId) {
