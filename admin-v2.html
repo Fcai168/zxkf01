@@ -981,8 +981,8 @@
             if (!sb) { list.innerHTML = '<div class="empty-tip">数据库连接失败</div>'; return; }
             const seq = ++userListSeq; // 竞态保护
             try {
-                // 拉取全部消息，按访客分组
-                const { data: msgs, error } = await sb.from('messages').select('*').order('created_at', {ascending: true});
+                // 拉取全部消息（只取轻字段！select(*)会带上图片base64，457KB拉100秒，手机上永远超时）
+                const { data: msgs, error } = await sb.from('messages').select('id, visitor_id, from_role, status, created_at').order('created_at', {ascending: true});
                 if (seq !== userListSeq) return; // 已有更新的列表请求，丢弃本次结果
                 if (error) throw error;
                 const groups = {};
@@ -1074,9 +1074,10 @@
             
             window.messagePollTimers[userId] = setInterval(async () => {
                 try {
+                    // 只查轻字段（算未读数用），图片在renderChat里按需查
                     const { data } = await sb
                         .from('messages')
-                        .select('*')
+                        .select('id, from_role, status, created_at')
                         .eq('visitor_id', userId)
                         .order('created_at', {ascending: false})
                         .limit(10);
