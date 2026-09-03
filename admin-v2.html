@@ -979,11 +979,11 @@
         async function renderUserList() {
             const list = document.getElementById('userList');
             if (!sb) { list.innerHTML = '<div class="empty-tip">数据库连接失败</div>'; return; }
-            const seq = ++renderSeq; // 竞态保护
+            const seq = ++userListSeq; // 竞态保护
             try {
                 // 拉取全部消息，按访客分组
                 const { data: msgs, error } = await sb.from('messages').select('*').order('created_at', {ascending: true});
-                if (seq !== renderSeq) return; // 已有更新的渲染请求，丢弃本次结果
+                if (seq !== userListSeq) return; // 已有更新的列表请求，丢弃本次结果
                 if (error) throw error;
                 const groups = {};
                 (msgs || []).forEach(m => {
@@ -1115,12 +1115,12 @@
         async function renderChat() {
             const container = document.getElementById('chatMessages');
             if (!currentUser || !sb) { container.innerHTML = '<div class="empty-tip">暂无消息</div>'; return; }
-            const seq = ++renderSeq; // 竞态保护：切换用户后丢弃过期渲染
+            const seq = ++chatSeq; // 竞态保护：切换用户后丢弃过期渲染
             const targetId = currentUser.id;
             try {
                 const { data: msgs, error } = await sb
                     .from('messages').select('*').eq('visitor_id', targetId).order('created_at', {ascending: true});
-                if (seq !== renderSeq) return; // 用户已切换，丢弃本次结果（防止误标已读）
+                if (seq !== chatSeq) return; // 用户已切换，丢弃本次结果（防止误标已读）
                 if (error) throw error;
                 container.innerHTML = (msgs || []).length
                     ? msgs.map(msgHtml).join('')
@@ -1128,7 +1128,7 @@
                 // 标记访客消息为已读
                 const unread = (msgs || []).filter(m => m.from_role === 'visitor' && m.status !== 'read').map(m => m.id);
                 if (unread.length) await sb.from('messages').update({status: 'read'}).in('id', unread);
-                if (seq !== renderSeq) return;
+                if (seq !== chatSeq) return;
                 container.scrollTop = container.scrollHeight;
             } catch(e) {
                 console.error('渲染聊天失败', e);
@@ -1156,7 +1156,8 @@
         let typingCheckTimer = null;
         let userListTimer = null;
         let knownMsgIds = null; // 已见过的访客消息ID集合，null=首次加载
-        let renderSeq = 0; // 渲染序号：防止切换用户时旧异步结果覆盖新内容（竞态保护）
+        let userListSeq = 0; // 用户列表渲染序号（竞态保护：只丢弃被更新的列表请求顶掉的结果）
+        let chatSeq = 0;     // 聊天渲染序号（切换用户时丢弃旧用户的过期结果）
 
         // 新消息横幅提示（点击直接跳到该访客）
         function showNewMsgBanner(visitorId) {
