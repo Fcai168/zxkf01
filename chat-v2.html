@@ -476,9 +476,10 @@
                     
                     lastMsgTime = newest.created_at;
                     
-                    // 只追加新消息
+                    // 只追加新消息（data是倒序，反转为升序再按时间先后追加，保证顺序正确）
                     const container = document.getElementById('chatMessages');
                     const existingIds = Array.from(container.querySelectorAll('.message')).map(el => el.dataset.msgId);
+                    data.reverse();
                     
                     for (const msg of data) {
                         if (existingIds.includes(msg.id)) continue;
@@ -543,9 +544,28 @@
                 input.value = '';
                 input.style.height = 'auto';
             }
+            // 先取走图片再removeImage（removeImage会把pendingImage置空）
+            const imgForScreen = pendingImage;
             removeImage();
             // 清除打字状态
             sb.from('typing_status').delete().eq('visitor_id', currentVisitorId).catch(() => {});
+            
+            // 立即上屏：不等2秒轮询，自己发的消息马上显示（轮询会按msgId去重不会重复插入）
+            try {
+                const c = document.getElementById('chatMessages');
+                const old = c.querySelector('.empty-tip');
+                if (old) old.remove();
+                const div = document.createElement('div');
+                div.className = 'message msg-new user';
+                div.dataset.msgId = msgId;
+                let html = '';
+                if (imgForScreen) html += `<img src="${escapeHtml(imgForScreen)}" alt="图片">`;
+                else if (text) html += escapeHtml(text).replace(/\n/g, '<br>');
+                html += `<div class="message-time">${formatTime(new Date().toISOString())}</div>`;
+                div.innerHTML = html;
+                c.appendChild(div);
+                c.scrollTop = c.scrollHeight;
+            } catch(e) { console.warn('立即上屏失败:', e); }
         }
 
         // 快捷消息
@@ -655,28 +675,43 @@
         }
 
         // 事件监听
-        // 打字上报定时器
+        // 打字上报：首字立即上报（后台马上能看到），之后每300ms续报一次
         let _typingTimer = null;
+        let _typingReported = false; // 本次连续打字是否已上报过首字
         
         document.getElementById('messageInput').addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 100) + 'px';
             document.getElementById('sendBtn').disabled = !this.value.trim() && !pendingImage;
             
-            // 打字上报：防抖500ms，写入typing_status表
-            clearTimeout(_typingTimer);
-            if (!this.value.trim()) {
+            const val = this.value.trim();
+            if (!val) {
+                // 清空输入：停止续报（打字状态由发送/超60秒后自动消失）
+                clearTimeout(_typingTimer);
                 _typingTimer = null;
-            } else {
-                _typingTimer = setTimeout(() => {
-                    try {
-                        sb.from('typing_status').upsert({
-                            visitor_id: currentVisitorId,
-                            text: this.value
-                        }).catch(e => console.warn('打字上报失败:', e));
-                    } catch(e) { console.warn('打字上报异常:', e); }
-                }, 500);
+                _typingReported = false;
+                return;
             }
+            clearTimeout(_typingTimer);
+            if (!_typingReported) {
+                // 首字：立即上报，后台2秒内轮询就能显示
+                _typingReported = true;
+                try {
+                    sb.from('typing_status').upsert({
+                        visitor_id: currentVisitorId,
+                        text: this.value
+                    }).catch(e => console.warn('打字上报失败:', e));
+                } catch(e) { console.warn('打字上报异常:', e); }
+            }
+            // 后续每个字：300ms防抖续报
+            _typingTimer = setTimeout(() => {
+                try {
+                    sb.from('typing_status').upsert({
+                        visitor_id: currentVisitorId,
+                        text: this.value
+                    }).catch(e => console.warn('打字续报失败:', e));
+                } catch(e) { console.warn('打字续报异常:', e); }
+            }, 300);
         });
 
         document.getElementById('messageInput').addEventListener('keydown', function(e) {
