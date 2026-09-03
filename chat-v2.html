@@ -108,9 +108,10 @@
             font-size: 14px;
             line-height: 1.6;
             word-break: break-word;
-            animation: msgIn 0.25s ease;
+            /* 默认不播放弹跳动画（刷新/历史消息不跳动），新消息由JS加.msg-new触发 */
             box-shadow: 0 1px 4px rgba(30,60,100,0.08);
         }
+        .message.msg-new { animation: msgIn 0.25s ease; }
         @keyframes msgIn {
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
@@ -483,7 +484,7 @@
                         if (existingIds.includes(msg.id)) continue;
                         
                         const div = document.createElement('div');
-                        div.className = `message ${msg.from_role === 'agent' ? 'agent' : 'user'}`;
+                        div.className = `message msg-new ${msg.from_role === 'agent' ? 'agent' : 'user'}`;
                         div.dataset.msgId = msg.id;
                         
                         let content = '';
