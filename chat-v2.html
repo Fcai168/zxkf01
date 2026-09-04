@@ -408,18 +408,27 @@
 
         // 加载消息
         async function loadMessages() {
+            // 倒序取最近50条再反转：老访客的历史+图片不会全量拉下来（首屏秒开）
             const { data, error } = await sb
                 .from('messages')
                 .select('*')
                 .eq('visitor_id', currentVisitorId)
-                .order('created_at', { ascending: true });
+                .order('created_at', { ascending: false })
+                .limit(50);
             
             if (error) {
                 console.error('加载消息失败:', error);
                 return;
             }
             
-            renderMessages(data || []);
+            renderMessages((data || []).reverse());
+        }
+
+        // 智能滚动：只在用户本来就接近底部时才滚底，翻历史时不被新消息拽走
+        function smartScroll(el) {
+            if (!el) return;
+            const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+            if (nearBottom) el.scrollTop = el.scrollHeight;
         }
 
         // 渲染消息
@@ -430,6 +439,7 @@
             messages.forEach(msg => {
                 const div = document.createElement('div');
                 div.className = `message ${msg.from_role === 'agent' ? 'agent' : 'user'}`;
+                div.dataset.msgId = msg.id; // 必须有ID标记：否则首次轮询会把最近5条当新消息重插一遍（"跳动"根因）
                 
                 let content = '';
                 if (msg.type === 'image' && msg.file) {
@@ -443,7 +453,7 @@
                 container.appendChild(div);
             });
             
-            container.scrollTop = container.scrollHeight;
+            container.scrollTop = container.scrollHeight; // 首屏加载：滚到底部
         }
 
         // 消息轮询（替代Realtime，避免端点404问题）
@@ -466,7 +476,7 @@
                         .select('*')
                         .eq('visitor_id', currentVisitorId)
                         .order('created_at', {ascending: false})
-                        .limit(5);
+                        .limit(15); // 15条：2秒周期内超过5条也不会漏消息（旧消息由msgId去重兜底）
                     
                     if (error || !data || data.length === 0) return;
                     
@@ -500,7 +510,7 @@
                         container.appendChild(div);
                     }
                     
-                    container.scrollTop = container.scrollHeight;
+                    smartScroll(container); // 智能滚动：翻历史时不被拽走
                 } catch(e) {
                     console.warn('检查新消息失败:', e);
                 }
@@ -520,22 +530,28 @@
             sendBtn.disabled = true;
             
             const msgId = 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-            const { error } = await sb.from('messages').insert({
-                id: msgId,
-                visitor_id: currentVisitorId,
-                from_role: 'visitor',
-                type: pendingImage ? 'image' : 'text',
-                content: text,
-                file: pendingImage,
-                status: 'sent',
-                created_at: new Date().toISOString()
-            });
-            
+            let insertError = null;
+            try {
+                const { error } = await sb.from('messages').insert({
+                    id: msgId,
+                    visitor_id: currentVisitorId,
+                    from_role: 'visitor',
+                    type: pendingImage ? 'image' : 'text',
+                    content: text,
+                    file: pendingImage,
+                    status: 'sent',
+                    created_at: new Date().toISOString()
+                });
+                insertError = error;
+            } catch (e) {
+                insertError = { message: String(e && e.message || e) }; // 网络异常也要恢复按钮，不能卡死
+            }
+
             sending = false;
             sendBtn.disabled = !input.value.trim() && !pendingImage;
             
-            if (error) {
-                console.error('发送失败:', error);
+            if (insertError) {
+                console.error('发送失败:', insertError);
                 alert('发送失败，请重试');
                 return;
             }
@@ -686,10 +702,17 @@
             
             const val = this.value.trim();
             if (!val) {
-                // 清空输入：停止续报（打字状态由发送/超60秒后自动消失）
+                // 清空输入：停止续报，并上报空文本让后台立即停止"正在输入"
+                // （anon对typing_status的DELETE是RLS静默无效，只能靠upsert空文本+后台忽略空文本）
                 clearTimeout(_typingTimer);
                 _typingTimer = null;
                 _typingReported = false;
+                try {
+                    sb.from('typing_status').upsert({
+                        visitor_id: currentVisitorId,
+                        text: ''
+                    }).catch(e => console.warn('清空打字态失败:', e));
+                } catch(e) { console.warn('清空打字态异常:', e); }
                 return;
             }
             clearTimeout(_typingTimer);
