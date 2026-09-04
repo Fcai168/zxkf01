@@ -990,8 +990,11 @@
                 (msgs || []).forEach(m => {
                     if (!groups[m.visitor_id]) groups[m.visitor_id] = {id: m.visitor_id, last: 0, total: 0, unread: 0};
                     groups[m.visitor_id].total++;
-                    const t = new Date(m.created_at).getTime();
-                    if (t > groups[m.visitor_id].last) groups[m.visitor_id].last = t;
+                    // 在线判定只算访客自己的动作：客服回复不刷新访客"在线"时间（否则客服回完30分钟内都挂着办理中）
+                    if (m.from_role === 'visitor') {
+                        const t = new Date(m.created_at).getTime();
+                        if (t > groups[m.visitor_id].last) groups[m.visitor_id].last = t;
+                    }
                     if (m.from_role === 'visitor' && m.status !== 'read') groups[m.visitor_id].unread++;
                 });
                 const now = Date.now();
@@ -1075,10 +1078,10 @@
             
             window.messagePollTimers[userId] = setInterval(async () => {
                 try {
-                    // 只查轻字段（算未读数+发现新消息），图片在renderChat里按需查
+                    // 只查轻字段（算未读数+发现新消息）。不查file：每2秒重下图片base64会拖垮流量（图片在renderChat里按需查）
                     const { data } = await sb
                         .from('messages')
-                        .select('id, from_role, content, file, type, status, created_at')
+                        .select('id, from_role, content, type, status, created_at')
                         .eq('visitor_id', userId)
                         .order('created_at', {ascending: false})
                         .limit(100);
@@ -1094,7 +1097,7 @@
                     // 如果当前选中的是这个用户：只追加新消息，没有新消息就啥也不干（防跳动）
                     if (currentUser && currentUser.id === userId) {
                         if (!chatKnownIds || chatKnownIds.size === 0) {
-                            // 首次轮询尚未建立ID集合（比如renderChat失败过），全量补一次
+                            // 首次轮询尚未建立ID集合（比如renderChat失败过）：只登记不追加（避免>100条时把老消息再插一遍）
                             chatKnownIds = new Set(data.map(m => m.id));
                         } else {
                             const fresh = data.filter(m => !chatKnownIds.has(m.id));
@@ -1102,10 +1105,12 @@
                                 const container = document.getElementById('chatMessages');
                                 const old = container.querySelector('.empty-tip');
                                 if (old) old.remove();
+                                // 新消息里没有图片（轮询不查file），图片占位由刷新/renderChat补齐
                                 container.insertAdjacentHTML('beforeend', fresh.map(msgHtml).join('')
                                     .replace(/class="msg /g, 'class="msg msg-new '));
                                 fresh.forEach(m => chatKnownIds.add(m.id));
-                                container.scrollTop = container.scrollHeight;
+                                const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+                                if (nearBottom) container.scrollTop = container.scrollHeight; // 智能滚动：翻历史时不拽底
                             }
                         }
                     }
@@ -1124,8 +1129,12 @@
                 .eq('visitor_id', userId)
                 .gte('created_at', new Date(Date.now() - 60000).toISOString())
                 .order('created_at', {ascending: false})
-                .limit(1)
-                .then(({ data }) => updateTypingIndicator(userId, data))
+                .limit(5)
+                .then(({ data }) => {
+                    // 访客"删字重写"会留下空文本行：取最近5行里第一条非空的（空文本=停止输入）
+                    const t = (data || []).map(r => r.text).find(x => x && x.trim());
+                    updateTypingIndicator(userId, t ? [{text: t}] : []);
+                })
                 .catch(e => console.warn('打字状态查询失败:', e));
         }
 
@@ -1134,11 +1143,27 @@
             if (!currentUser || !sb) { container.innerHTML = '<div class="empty-tip">暂无消息</div>'; return; }
             const seq = ++chatSeq; // 竞态保护：切换用户后丢弃过期渲染
             const targetId = currentUser.id;
+            const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
             try {
+                // 轻字段查消息（不select *！老访客带图历史曾把全字段查询拖到100秒）
                 const { data: msgs, error } = await sb
-                    .from('messages').select('*').eq('visitor_id', targetId).order('created_at', {ascending: true});
+                    .from('messages')
+                    .select('id, from_role, type, content, status, created_at')
+                    .eq('visitor_id', targetId)
+                    .order('created_at', {ascending: false})
+                    .limit(200); // 只取最近200条
                 if (seq !== chatSeq) return; // 用户已切换，丢弃本次结果（防止误标已读）
                 if (error) throw error;
+                msgs && msgs.reverse(); // 反转为时间升序
+                // 图片按需补查：只有最近200条里的图片消息才拉file字段
+                const imgIds = (msgs || []).filter(m => m.type === 'image').map(m => m.id);
+                if (imgIds.length) {
+                    const { data: files } = await sb.from('messages').select('id, file').in('id', imgIds);
+                    if (seq !== chatSeq) return;
+                    const fMap = {};
+                    (files || []).forEach(f => fMap[f.id] = f.file);
+                    msgs.forEach(m => { if (m.type === 'image') m.file = fMap[m.id] || null; });
+                }
                 container.innerHTML = (msgs || []).length
                     ? msgs.map(msgHtml).join('')
                     : '<div class="empty-tip">暂无消息</div>';
@@ -1147,10 +1172,12 @@
                 const unread = (msgs || []).filter(m => m.from_role === 'visitor' && m.status !== 'read').map(m => m.id);
                 if (unread.length) await sb.from('messages').update({status: 'read'}).in('id', unread);
                 if (seq !== chatSeq) return;
-                container.scrollTop = container.scrollHeight;
+                // 智能滚动：打开用户时正常滚底；若只是轮询触发的重渲染且用户在翻历史，不拽底
+                if (wasAtBottom || !chatKnownIds) container.scrollTop = container.scrollHeight;
             } catch(e) {
                 console.error('渲染聊天失败', e);
                 container.innerHTML = '<div class="empty-tip">加载消息失败，请刷新</div>';
+                // 失败时chatKnownIds保持null，轮询兜底分支会安全重建（只登记不追加）
             }
         }
 
@@ -1163,11 +1190,15 @@
             // 只更新当前选中用户的打字状态
             if (!currentUser || currentUser.id !== userId) return;
             
-            if (data && data.length > 0) {
-                indicator.textContent = '访客正在输入: ' + escapeHtml(data[0].text);
+            const t = data && data.length > 0 ? (data[0].text || '').trim() : '';
+            if (t) {
+                // 空文本=访客已清空输入/发完消息（前台delete对RLS无效，靠空文本标记），立即停止显示
+                indicator.textContent = '访客正在输入: ' + escapeHtml(t);
                 indicator.style.display = 'block';
+                indicator.classList.add('active');
             } else {
                 indicator.style.display = 'none';
+                indicator.classList.remove('active');
             }
         }
 
@@ -1204,8 +1235,11 @@
                     .eq('visitor_id', currentUser.id)
                     .gte('created_at', new Date(Date.now() - 60000).toISOString())
                     .order('created_at', {ascending: false})
-                    .limit(1)
-                    .then(({ data }) => updateTypingIndicator(currentUser.id, data))
+                    .limit(5)
+                    .then(({ data }) => {
+                        const t = (data || []).map(r => r.text).find(x => x && x.trim());
+                        updateTypingIndicator(currentUser.id, t ? [{text: t}] : []);
+                    })
                     .catch(e => console.warn('打字状态检查失败:', e));
             }, 2000);
             
@@ -1216,6 +1250,18 @@
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') renderUserList();
             });
+            
+            // 打字态表自动清理（无唯一约束，upsert实际在插新行，不清理会膨胀到数百万行）
+            // 后台用全权限key，DELETE有效；60秒窗口外的数据对显示没有任何作用
+            function cleanTypingTable() {
+                sb.from('typing_status')
+                    .delete()
+                    .lt('created_at', new Date(Date.now() - 10 * 60 * 1000).toISOString())
+                    .then(() => {})
+                    .catch(e => console.warn('打字态清理失败:', e));
+            }
+            cleanTypingTable();
+            setInterval(cleanTypingTable, 30 * 60 * 1000);
         }
 
         function agentSend() {
@@ -1247,8 +1293,23 @@
                 if (error) throw error;
                 document.getElementById('agentInput').value = '';
                 removeAgentImg();
-                await renderChat();
-                renderUserList();
+                // 本地追加新消息（不再全量renderChat重渲染——旧做法在2s轮询竞争时消息会"瞬移"闪跳）
+                const container = document.getElementById('chatMessages');
+                const emptyTip = container.querySelector('.empty-tip');
+                if (emptyTip) emptyTip.remove();
+                const newMsg = {
+                    id: msgId,
+                    from_role: 'agent',
+                    type: file ? 'image' : 'text',
+                    content: text || null,
+                    file: file || null,
+                    status: 'sent',
+                    created_at: new Date().toISOString()
+                };
+                container.insertAdjacentHTML('beforeend',
+                    msgHtml(newMsg).replace('class="msg ', 'class="msg msg-new '));
+                if (chatKnownIds) chatKnownIds.add(msgId); // 轮询按ID去重，不会重复插入
+                container.scrollTop = container.scrollHeight; // 自己发的消息：强制滚底（用户就在输入区）
             } catch(e) {
                 console.error('发送失败', e);
                 alert('发送失败，请重试');
