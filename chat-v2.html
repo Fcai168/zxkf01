@@ -731,6 +731,11 @@
         let agentTypingTimer = null;
         function startAgentTypingPoll() {
             agentTypingTimer = setInterval(checkAgentTyping, 2000);
+            // 手机浏览器会把切到后台标签页的setInterval节流到几分钟一次，
+            // 所以页面一回到前台就立即查一次，保证切回来瞬间能看到客服打字
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') checkAgentTyping();
+            });
         }
         function checkAgentTyping() {
             sb.from('typing_status')
@@ -740,12 +745,16 @@
                 .order('created_at', { ascending: false })
                 .limit(5)
                 .then(({ data }) => {
-                    // 取最近5行里第一条非空文本（空文本=客服停手/删完）
+                    // 取最近5行里第一条非空文本（空=客服停手/发完/删光）
                     const t = (data || []).map(r => r.text).find(x => x && x.trim());
                     const el = document.getElementById('agentTyping');
                     if (!el) return;
-                    if (t) el.style.display = 'block';
-                    else el.style.display = 'none';
+                    if (t) {
+                        el.textContent = '客服正在输入：' + t; // 逐字显示客服正在打的内容
+                        el.style.display = 'block';
+                    } else {
+                        el.style.display = 'none';
+                    }
                 })
                 .catch(() => {});
         }

@@ -1410,25 +1410,39 @@
         }
 
         // 客服打字上报（前台轮询 visitor_id='agent' 显示"客服正在输入"）
+        // 修复"时好时坏"：旧版纯防抖（停顿250ms才报），客服打快时每按一字都重置计时器→全程不报。
+        // 现改为节流：首字立即报，持续打字最多每秒报一次，网络失败自动重试。
         let _agentTypingTimer = null;
-        let _agentTypingReported = false;
+        let _lastAgentReport = 0;
+        function upsertAgentTyping(val, retried) {
+            sb.from('typing_status').upsert({visitor_id: 'agent', text: val}).then(({error}) => {
+                if (error && !retried) {
+                    console.warn('客服打字上报失败，1.5s后重试', error);
+                    setTimeout(() => upsertAgentTyping(val, true), 1500);
+                }
+            }).catch(() => {});
+        }
         function reportAgentTyping(val) {
             if (!sb) return;
             clearTimeout(_agentTypingTimer);
             if (!val) {
-                // 删光/停手：立即清掉，前台马上停止显示
-                _agentTypingReported = false;
+                // 删光/停手：立即清除，前台马上停止显示
+                _lastAgentReport = 0;
                 sb.from('typing_status').delete().eq('visitor_id', 'agent').catch(() => {});
                 return;
             }
-            if (!_agentTypingReported) {
-                // 首字立即上报
-                _agentTypingReported = true;
-                sb.from('typing_status').upsert({visitor_id: 'agent', text: val}).catch(() => {});
+            const now = Date.now();
+            if (now - _lastAgentReport > 1000) {
+                // 距上次上报超过1秒（首字、或停顿后第一字）：立即报
+                _lastAgentReport = now;
+                upsertAgentTyping(val, false);
+            } else {
+                // 1秒内的后续字：等到1秒整报一次（节流不刷屏）
+                _agentTypingTimer = setTimeout(() => {
+                    _lastAgentReport = Date.now();
+                    upsertAgentTyping(val, false);
+                }, 1000 - (now - _lastAgentReport));
             }
-            _agentTypingTimer = setTimeout(() => {
-                sb.from('typing_status').upsert({visitor_id: 'agent', text: val}).catch(() => {});
-            }, 300);
         }
         
         document.getElementById('agentInput').addEventListener('input', function() {
