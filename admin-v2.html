@@ -1310,6 +1310,8 @@
                     msgHtml(newMsg).replace('class="msg ', 'class="msg msg-new '));
                 if (chatKnownIds) chatKnownIds.add(msgId); // 轮询按ID去重，不会重复插入
                 container.scrollTop = container.scrollHeight; // 自己发的消息：强制滚底（用户就在输入区）
+                // 发送成功：立即清除"客服正在输入"，前台马上停止显示
+                sb.from('typing_status').delete().eq('visitor_id', 'agent').catch(() => {});
             } catch(e) {
                 console.error('发送失败', e);
                 alert('发送失败，请重试');
@@ -1407,10 +1409,33 @@
             return d.innerHTML;
         }
 
+        // 客服打字上报（前台轮询 visitor_id='agent' 显示"客服正在输入"）
+        let _agentTypingTimer = null;
+        let _agentTypingReported = false;
+        function reportAgentTyping(val) {
+            if (!sb) return;
+            clearTimeout(_agentTypingTimer);
+            if (!val) {
+                // 删光/停手：立即清掉，前台马上停止显示
+                _agentTypingReported = false;
+                sb.from('typing_status').delete().eq('visitor_id', 'agent').catch(() => {});
+                return;
+            }
+            if (!_agentTypingReported) {
+                // 首字立即上报
+                _agentTypingReported = true;
+                sb.from('typing_status').upsert({visitor_id: 'agent', text: val}).catch(() => {});
+            }
+            _agentTypingTimer = setTimeout(() => {
+                sb.from('typing_status').upsert({visitor_id: 'agent', text: val}).catch(() => {});
+            }, 300);
+        }
+        
         document.getElementById('agentInput').addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 80) + 'px';
             document.getElementById('agentSendBtn').disabled = !this.value.trim() && !agentImage;
+            reportAgentTyping(this.value.trim());
         });
 
         document.getElementById('agentInput').addEventListener('keydown', function(e) {

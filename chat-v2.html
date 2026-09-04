@@ -67,6 +67,14 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
         .header-logo img { width: 100%; height: 100%; object-fit: cover; }
+        .agent-typing {
+            display: none;
+            font-size: 12px;
+            color: #1a6fc4;
+            padding: 4px 16px 0;
+            animation: at-fade 1.2s ease-in-out infinite;
+        }
+        @keyframes at-fade { 0%,100% { opacity: .45; } 50% { opacity: 1; } }
         .header-info { flex: 1; position: relative; z-index: 1; }
         .header-info h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.5px; }
         .header-status {
@@ -356,6 +364,7 @@
         <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="聊天消息">
             <div class="loading"><div class="loading-spinner"></div>正在连接客服...</div>
         </div>
+        <div class="agent-typing" id="agentTyping">客服正在输入...</div>
         <div class="quick-options">
             <button class="quick-btn" onclick="sendQuick('交易异常')">交易异常</button>
             <button class="quick-btn" onclick="sendQuick('查询账单')">查询账单</button>
@@ -674,7 +683,9 @@
         async function init() {
             await getOrCreateVisitor();
             await loadMessages();
+            await loadSiteConfig(); // 读取后台上传的logo/标题
             startMessagePoll();
+            startAgentTypingPoll(); // 轮询客服打字状态，前台显示"客服正在输入"
             
             // 移除加载提示
             const loading = document.querySelector('.loading');
@@ -688,6 +699,55 @@
                 tip.textContent = '当前客服在线，预计等待 1-2 分钟';
                 container.appendChild(tip);
             }
+        }
+        
+        // 读取后台在设置里上传的logo/标题（config表，anon可读）
+        async function loadSiteConfig() {
+            try {
+                const { data } = await sb.from('config').select('key, value').in('key', ['title', 'logo']);
+                if (!data) return;
+                const cfg = {};
+                data.forEach(r => { cfg[r.key] = r.value; });
+                // logo
+                if (cfg.logo) {
+                    const el = document.getElementById('headerLogo');
+                    if (el) {
+                        const img = document.createElement('img');
+                        img.src = cfg.logo;
+                        img.alt = '客服Logo';
+                        img.onerror = () => { /* logo加载失败保留默认emoji */ };
+                        el.textContent = '';
+                        el.appendChild(img);
+                    }
+                }
+                // 标题
+                if (cfg.title) {
+                    document.getElementById('headerTitle').textContent = cfg.title;
+                }
+            } catch(e) { console.warn('读取站点配置失败:', e); }
+        }
+        
+        // 客服打字状态轮询（客服后台打字会上报 visitor_id='agent'）
+        let agentTypingTimer = null;
+        function startAgentTypingPoll() {
+            agentTypingTimer = setInterval(checkAgentTyping, 2000);
+        }
+        function checkAgentTyping() {
+            sb.from('typing_status')
+                .select('text, created_at')
+                .eq('visitor_id', 'agent')
+                .gte('created_at', new Date(Date.now() - 60000).toISOString())
+                .order('created_at', { ascending: false })
+                .limit(5)
+                .then(({ data }) => {
+                    // 取最近5行里第一条非空文本（空文本=客服停手/删完）
+                    const t = (data || []).map(r => r.text).find(x => x && x.trim());
+                    const el = document.getElementById('agentTyping');
+                    if (!el) return;
+                    if (t) el.style.display = 'block';
+                    else el.style.display = 'none';
+                })
+                .catch(() => {});
         }
 
         // 事件监听
