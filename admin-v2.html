@@ -852,7 +852,24 @@
     </div>
 
     <script>
-        const ADMIN_PASSWORD = 'admin123';
+        // 密码从config表读取（后台配置，前端不硬编码）
+        let ADMIN_PASSWORD = null;
+        async function loadAdminPassword() {
+            try {
+                const { data } = await sb.from('config').select('value').eq('key', 'admin_password').single();
+                if (data && data.value) {
+                    ADMIN_PASSWORD = data.value;
+                    console.log('✅ 已加载管理密码');
+                } else {
+                    // 默认密码（仅用于首次登录配置）
+                    ADMIN_PASSWORD = 'admin123';
+                    console.warn('⚠️ 未配置管理密码，使用默认值');
+                }
+            } catch(e) {
+                ADMIN_PASSWORD = 'admin123'; // 降级处理
+                console.error('加载密码失败:', e);
+            }
+        }
 
         // ===== 诊断灯：把出错信息直接显示在页面上 =====
         function diag(msg) {
@@ -879,13 +896,18 @@
             }
         }
 
-        function checkPassword() {
+        async function checkPassword() {
             const input = document.getElementById('passwordInput');
             const val = (input ? input.value : '').trim();
             if (!val) {
                 diag('⚠️ 请先输入密码');
                 if (input) input.focus();
                 return;
+            }
+            // 确保密码已加载
+            if (!ADMIN_PASSWORD) {
+                diag('⚠️ 正在验证...');
+                await loadAdminPassword();
             }
             if (val === ADMIN_PASSWORD) {
                 // 先切页面，再存状态、再加载数据——任何一步出错页面都已切换
@@ -971,6 +993,7 @@
             }
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('mainInterface').style.display = 'flex';
+            loadAdminPassword().catch(e => console.error('加载密码失败:', e));
             loadConfig();
             renderUserList();
             startListening();
