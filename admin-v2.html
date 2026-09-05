@@ -616,11 +616,37 @@
         }
 
         /* 设置页面 */
-        .settings-page { 
-            flex: 1; 
-            overflow-y: auto; 
+        .settings-page {
+            flex: 1;
+            overflow-y: auto;
             padding: 12px;
         }
+        .settings-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .settings-header h2 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .back-btn {
+            background: #f3f4f6;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 14px;
+            color: #374151;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .back-btn:hover { background: #e5e7eb; }
         .setting-card {
             background: #fff;
             border-radius: 10px;
@@ -797,6 +823,10 @@
         <!-- 设置页面 -->
         <div id="settings" class="main-wrapper" style="display:none;">
             <div class="settings-page">
+                <div class="settings-header">
+                    <button class="back-btn" onclick="switchMain('chat')">← 返回</button>
+                    <h2>银联在线客服设置</h2>
+                </div>
                 <div class="setting-card">
                     <div class="setting-card-title">🖼️ Logo设置</div>
                     <div class="logo-box">
