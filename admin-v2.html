@@ -1323,9 +1323,16 @@
 
         async function doAgentSend(text, btn) {
             try {
+                // 诊断：检查sb是否可用
+                if (!sb) {
+                    console.error('【发送失败】sb未初始化');
+                    alert('数据库未连接，请刷新页面重试');
+                    return;
+                }
                 let file = agentImage;
                 // 选图时已压缩，直接使用
                 const msgId = 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+                console.log('【发送】插入消息:', msgId, 'visitor:', currentUser?.id);
                 const { error } = await sb.from('messages').insert({
                     id: msgId,
                     visitor_id: currentUser.id,
@@ -1336,7 +1343,11 @@
                     status: 'sent',
                     created_at: new Date().toISOString()
                 });
-                if (error) throw error;
+                if (error) {
+                    console.error('【发送失败】DB错误:', error);
+                    throw error;
+                }
+                console.log('【发送成功】', msgId);
                 document.getElementById('agentInput').value = '';
                 removeAgentImg();
                 // 本地追加新消息（不再全量renderChat重渲染——旧做法在2s轮询竞争时消息会"瞬移"闪跳）
@@ -1359,8 +1370,8 @@
                 // 发送成功：立即清除"客服正在输入"，前台马上停止显示
                 sb.from('typing_status').delete().eq('visitor_id', 'agent').catch(() => {});
             } catch(e) {
-                console.error('发送失败', e);
-                alert('发送失败，请重试');
+                console.error('【发送失败】异常:', e);
+                alert('发送失败：' + (e.message || '网络错误') + '，请重试');
             } finally {
                 btn.disabled = false;
             }
