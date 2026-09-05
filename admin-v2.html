@@ -1066,7 +1066,8 @@
             const cls = m.from_role === 'agent' ? 'agent' : 'user';
             const pic = m.type === 'image' && m.file ? `<img src="${escapeHtml(m.file)}" alt="图片">` : '';
             const txt = m.type === 'text' && m.content ? escapeHtml(m.content).replace(/\n/g, '<br>') : '';
-            return `<div class="msg ${cls}">${pic}${txt}<div class="msg-time">${escapeHtml(formatTime(m.created_at))}</div></div>`;
+            const sender = m.from_role === 'agent' ? '<span class="msg-sender">客服</span>' : '';
+            return `<div class="msg ${cls}">${sender}${pic}${txt}<div class="msg-time">${escapeHtml(formatTime(m.created_at))}</div></div>`;
         }
 
         async function selectUser(userId) {
