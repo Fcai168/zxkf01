@@ -1457,7 +1457,7 @@
         
         document.getElementById('agentInput').addEventListener('input', function() {
             this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+            this.style.height = Math.min(this.scrollHeight, 150) + 'px';
             document.getElementById('agentSendBtn').disabled = !this.value.trim() && !agentImage;
             reportAgentTyping(this.value.trim());
         });
