@@ -780,7 +780,7 @@
         </div>
 
         <!-- 主内容 -->
-        <div class="main-wrapper">
+        <div id="chatMain" class="main-wrapper">
             <!-- 用户列表 -->
             <div class="user-sidebar">
                 <div class="user-tabs">
@@ -987,12 +987,14 @@
         let currentTab = 'online';
 
         function switchMain(tab) {
+            const mainWrapper = document.getElementById('chatMain');
+            const settingsPage = document.getElementById('settings');
             if (tab === 'settings') {
-                document.querySelector('.main-wrapper').style.display = 'none';
-                document.getElementById('settings').style.display = 'flex';
+                mainWrapper.style.display = 'none';
+                settingsPage.style.display = 'flex';
             } else {
-                document.querySelector('.main-wrapper').style.display = 'flex';
-                document.getElementById('settings').style.display = 'none';
+                mainWrapper.style.display = 'flex';
+                settingsPage.style.display = 'none';
             }
         }
 
