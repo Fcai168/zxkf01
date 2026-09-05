@@ -364,7 +364,6 @@
         <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="聊天消息">
             <div class="loading"><div class="loading-spinner"></div>正在连接客服...</div>
         </div>
-        <div class="agent-typing" id="agentTyping">客服正在输入...</div>
         <div class="quick-options">
             <button class="quick-btn" onclick="sendQuick('交易异常')">交易异常</button>
             <button class="quick-btn" onclick="sendQuick('查询账单')">查询账单</button>
@@ -685,7 +684,6 @@
             await loadMessages();
             await loadSiteConfig(); // 读取后台上传的logo/标题
             startMessagePoll();
-            startAgentTypingPoll(); // 轮询客服打字状态，前台显示"客服正在输入"
             
             // 移除加载提示
             const loading = document.querySelector('.loading');
@@ -727,40 +725,6 @@
             } catch(e) { console.warn('读取站点配置失败:', e); }
         }
         
-        // 客服打字状态轮询（客服后台打字会上报 visitor_id='agent'）
-        let agentTypingTimer = null;
-        function startAgentTypingPoll() {
-            agentTypingTimer = setInterval(checkAgentTyping, 2000);
-            // 手机浏览器会把切到后台标签页的setInterval节流到几分钟一次，
-            // 所以页面一回到前台就立即查一次，保证切回来瞬间能看到客服打字
-            document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible') checkAgentTyping();
-            });
-        }
-        function checkAgentTyping() {
-            sb.from('typing_status')
-                .select('text, created_at')
-                .eq('visitor_id', 'agent')
-                .order('created_at', { ascending: false })
-                .limit(5)
-                .then(({ data }) => {
-                    // 取最近5行里第一条非空文本（空=客服停手/发完/删光）
-                    // 过滤超过60秒的记录（打字状态半小时内有效）
-                    const now = Date.now();
-                    const t = (data || []).filter(r => now - new Date(r.created_at) < 60000)
-                        .map(r => r.text).find(x => x && x.trim());
-                    const el = document.getElementById('agentTyping');
-                    if (!el) return;
-                    if (t) {
-                        el.textContent = '客服正在输入：' + t;
-                        el.style.display = 'block';
-                    } else {
-                        el.style.display = 'none';
-                    }
-                })
-                .catch(() => {});
-        }
-
         // 事件监听
         // 打字上报：首字立即上报（后台马上能看到），之后每300ms续报一次
         let _typingTimer = null;
