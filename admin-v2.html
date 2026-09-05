@@ -1269,17 +1269,21 @@
             if (typingCheckTimer) clearInterval(typingCheckTimer);
             if (userListTimer) clearInterval(userListTimer);
             
-            // 每2秒检查一次打字状态（查询最近60秒，避免时序问题）
+            // 每2秒检查一次打字状态（拉取最近5条，本地过滤60秒内）
             typingCheckTimer = setInterval(() => {
                 if (!currentUser) return;
                 sb.from('typing_status')
                     .select('text, created_at')
                     .eq('visitor_id', currentUser.id)
-                    .gte('created_at', new Date(Date.now() - 60000).toISOString())
                     .order('created_at', {ascending: false})
                     .limit(5)
                     .then(({ data }) => {
-                        const t = (data || []).map(r => r.text).find(x => x && x.trim());
+                        // 本地过滤60秒内记录
+                        const now = Date.now();
+                        const t = (data || [])
+                            .filter(r => now - new Date(r.created_at) < 60000)
+                            .map(r => r.text)
+                            .find(x => x && x.trim());
                         updateTypingIndicator(currentUser.id, t ? [{text: t}] : []);
                     })
                     .catch(e => console.warn('打字状态检查失败:', e));
