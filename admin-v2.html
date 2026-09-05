@@ -1033,10 +1033,10 @@
                     return;
                 }
                 list.innerHTML = filtered.map(u => `
-                    <div class="user-item ${currentUser?.id === u.id ? 'active' : ''}" 
-                         onclick="selectUser('${escapeHtml(u.id)}')" 
-                         role="button" 
-                         tabindex="0" 
+                    <div class="user-item ${currentUser?.id === u.id ? 'active' : ''}"
+                         onclick="selectUser('${escapeHtml(u.id)}')"
+                         role="button"
+                         tabindex="0"
                          aria-label="选择用户 ${escapeHtml(u.name)}">
                         <div class="user-avatar">👤<span class="status-dot ${u.status === 'online' ? 'online' : ''}"></span></div>
                         <div class="user-meta">
@@ -1045,6 +1045,16 @@
                         </div>
                     </div>
                 `).join('');
+
+                // 自动选中：优先选第一个有未读消息的用户，避免新客服登录后看到空白页面
+                if (!currentUser) {
+                    const firstUnread = filtered.find(u => u.unread > 0);
+                    if (firstUnread) {
+                        selectUser(firstUnread.id);
+                    } else if (filtered.length > 0) {
+                        selectUser(filtered[0].id);
+                    }
+                }
             } catch(e) {
                 console.error('渲染用户列表失败', e);
                 list.innerHTML = '<div class="empty-tip">加载用户失败，请刷新</div>';
