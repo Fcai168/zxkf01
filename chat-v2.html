@@ -535,9 +535,23 @@
             const text = textOverride || input.value.trim();
             
             if (!text && !pendingImage) return;
+            
+            // 检查sb是否初始化
+            if (!sb) {
+                alert('数据库连接失败，请刷新页面重试');
+                return;
+            }
+            
+            // 检查visitor_id是否存在
+            if (!currentVisitorId) {
+                alert('访客ID获取失败，请刷新页面重试');
+                return;
+            }
+            
             sending = true;
             const sendBtn = document.getElementById('sendBtn');
             sendBtn.disabled = true;
+            sendBtn.textContent = '发送中...';
             
             const msgId = 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
             let insertError = null;
@@ -559,10 +573,11 @@
 
             sending = false;
             sendBtn.disabled = !input.value.trim() && !pendingImage;
+            sendBtn.textContent = '发送';
             
             if (insertError) {
                 console.error('发送失败:', insertError);
-                alert('发送失败，请重试');
+                alert('发送失败：' + (insertError.message || '未知错误') + '，请重试');
                 return;
             }
             
