@@ -1336,11 +1336,27 @@
         function agentSend() {
             const text = document.getElementById('agentInput').value.trim();
             if (!text && !agentImage) return;
-            if (!currentUser) { alert('请先选择用户'); return; }
-            if (!sb) { alert('数据库连接失败'); return; }
+            
+            // 诊断：检查必填项
+            if (!currentUser) { 
+                console.error('【发送失败】未选择用户');
+                alert('请先点击左边列表选择访客'); 
+                return; 
+            }
+            if (!currentUser.id) {
+                console.error('【发送失败】用户ID为空:', currentUser);
+                alert('用户信息异常，请刷新页面重试');
+                return;
+            }
+            if (!sb) { 
+                console.error('【发送失败】数据库未连接');
+                alert('数据库连接失败，请刷新页面重试'); 
+                return; 
+            }
 
             const btn = document.getElementById('agentSendBtn');
             btn.disabled = true;
+            btn.textContent = '发送中...';
             doAgentSend(text, btn);
         }
 
@@ -1394,9 +1410,11 @@
                 sb.from('typing_status').delete().eq('visitor_id', 'agent').catch(() => {});
             } catch(e) {
                 console.error('【发送失败】异常:', e);
-                alert('发送失败：' + (e.message || '网络错误') + '，请重试');
+                console.error('当前用户:', currentUser);
+                alert('发送失败：' + (e.message || '未知错误') + '，请重试');
             } finally {
                 btn.disabled = false;
+                btn.textContent = '发送';
             }
         }
 
