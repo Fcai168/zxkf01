@@ -1189,15 +1189,21 @@
         
         // 独立的打字状态查询函数
         function checkTypingStatus(userId) {
+            // 先查最近5条，本地过滤时间（避免服务端时间格式问题）
             sb.from('typing_status')
                 .select('text, created_at')
                 .eq('visitor_id', userId)
-                .gte('created_at', new Date(Date.now() - 60000).toISOString())
                 .order('created_at', {ascending: false})
                 .limit(5)
                 .then(({ data }) => {
-                    // 访客"删字重写"会留下空文本行：取最近5行里第一条非空的（空文本=停止输入）
-                    const t = (data || []).map(r => r.text).find(x => x && x.trim());
+                    // 本地过滤：只保留60秒内的记录
+                    const now = Date.now();
+                    const recent = (data || []).filter(r => {
+                        const created = new Date(r.created_at).getTime();
+                        return (now - created) < 60000; // 60秒内
+                    });
+                    // 取第一条非空文本
+                    const t = recent.map(r => r.text).find(x => x && x.trim());
                     updateTypingIndicator(userId, t ? [{text: t}] : []);
                 })
                 .catch(e => console.warn('打字状态查询失败:', e));
@@ -1361,6 +1367,12 @@
         }
 
         async function doAgentSend(text, btn) {
+            // 详细诊断
+            console.log('【发送诊断】sb存在:', !!sb);
+            console.log('【发送诊断】currentUser存在:', !!currentUser);
+            console.log('【发送诊断】currentUser.id:', currentUser?.id);
+            console.log('【发送诊断】text:', text);
+            
             try {
                 // 诊断：检查sb是否可用
                 if (!sb) {
@@ -1368,10 +1380,23 @@
                     alert('数据库未连接，请刷新页面重试');
                     return;
                 }
+                if (!currentUser || !currentUser.id) {
+                    console.error('【发送失败】用户信息异常:', currentUser);
+                    alert('请先选择访客再发送消息');
+                    return;
+                }
+                
                 let file = agentImage;
                 // 选图时已压缩，直接使用
                 const msgId = 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-                console.log('【发送】插入消息:', msgId, 'visitor:', currentUser?.id);
+                console.log('【发送】准备插入:', {
+                    id: msgId,
+                    visitor_id: currentUser.id,
+                    from_role: 'agent',
+                    type: file ? 'image' : 'text',
+                    content: text || null
+                });
+                
                 const { error } = await sb.from('messages').insert({
                     id: msgId,
                     visitor_id: currentUser.id,
@@ -1382,10 +1407,12 @@
                     status: 'sent',
                     created_at: new Date().toISOString()
                 });
+                
                 if (error) {
-                    console.error('【发送失败】DB错误:', error);
+                    console.error('【发送失败】DB错误详情:', error);
                     throw error;
                 }
+                
                 console.log('【发送成功】', msgId);
                 document.getElementById('agentInput').value = '';
                 removeAgentImg();
