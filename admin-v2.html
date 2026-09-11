@@ -1553,7 +1553,7 @@
             if (!val) {
                 // 删光/停手：立即清除，前台马上停止显示
                 _lastAgentReport = 0;
-                try { await sb.from('typing_status').delete().eq('visitor_id', 'agent'); } catch(e) {}
+                sb.from('typing_status').delete().eq('visitor_id', 'agent').then(() => {}).catch(() => {});
                 return;
             }
             const now = Date.now();
