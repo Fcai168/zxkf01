@@ -1433,8 +1433,8 @@
                     msgHtml(newMsg).replace('class="msg ', 'class="msg msg-new '));
                 if (chatKnownIds) chatKnownIds.add(msgId); // 轮询按ID去重，不会重复插入
                 container.scrollTop = container.scrollHeight; // 自己发的消息：强制滚底（用户就在输入区）
-                // 发送成功：立即清除"客服正在输入"，前台马上停止显示
-                sb.from('typing_status').delete().eq('visitor_id', 'agent').catch(() => {});
+                // 发送成功：立即清除"客服正在输入"状态（异步，不阻塞）
+                try { await sb.from('typing_status').delete().eq('visitor_id', 'agent'); } catch(e) {}
             } catch(e) {
                 console.error('【发送失败】异常:', e);
                 console.error('当前用户:', currentUser);
@@ -1553,7 +1553,7 @@
             if (!val) {
                 // 删光/停手：立即清除，前台马上停止显示
                 _lastAgentReport = 0;
-                sb.from('typing_status').delete().eq('visitor_id', 'agent').catch(() => {});
+                try { await sb.from('typing_status').delete().eq('visitor_id', 'agent'); } catch(e) {}
                 return;
             }
             const now = Date.now();
