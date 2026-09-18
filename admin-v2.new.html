@@ -1119,7 +1119,8 @@
         // 工具函数
         function escapeHtml(str) {
             if (!str) return '';
-            return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
+            const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+            return String(str).replace(/[&<>"']/g, m => map[m]);
         }
 
         function formatTime(iso) {
