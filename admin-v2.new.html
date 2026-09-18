@@ -1173,12 +1173,10 @@
             if (e.key === 'Enter') checkPassword();
         });
 
-        // 初始化
-        window.addEventListener('load', function() {
-            if (sessionStorage.getItem('adminAuthenticated')) {
-                initApp();
-            }
-        });
+        // 初始化 - 直接调用，不等待load事件
+        if (sessionStorage.getItem('adminAuthenticated')) {
+            initApp();
+        }
     </script>
 </body>
 </html>
