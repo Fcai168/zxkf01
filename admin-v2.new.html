@@ -853,7 +853,7 @@
                 }
                 
                 list.innerHTML = filtered.map(u => `
-                    <div class="user-item ${currentUser?.id === u.id ? 'active' : ''}" onclick="selectUser('${u.id}')">
+                    <div class="user-item ${currentUser?.id === u.id ? 'active' : ''}" onclick="selectUser('${u.id.replace(/'/g, "\\'")}')">
                         <div class="user-avatar">
                             👤
                             <span class="status-dot ${u.status}"></span>
