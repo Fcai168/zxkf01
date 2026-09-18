@@ -31,15 +31,28 @@ function createMockSb() {
           single: () => Promise.resolve({
             data: data[table]?.[0] || null,
             error: null
-          })
+          }),
+          in: (col2, vals) => {
+            // Filter by column in values array
+            const filtered = data[table].filter(m => vals.includes(m[col2]));
+            return Promise.resolve({ data: filtered, error: null });
+          }
         }),
         order: (col, opts) => ({
           gte: (val) => Promise.resolve({
             data: (data[table] || []).filter(m => new Date(m[col]) >= new Date(val))
               .sort((a,b) => new Date(b[col]) - new Date(a[col])).slice(0,1),
             error: null
-          })
-        })
+          }),
+          in: (col2, vals) => {
+            const filtered = data[table].filter(m => vals.includes(m[col2]));
+            return Promise.resolve({ data: filtered, error: null });
+          }
+        }),
+        in: (col, vals) => {
+          const filtered = data[table].filter(m => vals.includes(m[col]));
+          return Promise.resolve({ data: filtered, error: null });
+        }
       }),
       insert: (row) => {
         row.id = 'm-' + (idCounter++);
