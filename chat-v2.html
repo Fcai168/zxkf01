@@ -705,8 +705,9 @@
         function updateSendButton() {
             const btn = document.getElementById('sendBtn');
             if (btn) {
-                btn.disabled = !isOnline || !input.value.trim() && !pendingImage;
-                btn.title = isOnline ? '发送消息' : '网络已断开';
+                btn.disabled = !isOnline || (!input.value.trim() && !pendingImage);
+                if (!isOnline) btn.title = '网络已断开';
+                else btn.title = '发送消息';
             }
         }
         
