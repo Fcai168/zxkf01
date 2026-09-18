@@ -756,7 +756,8 @@
         let chatSeq = 0;
         let chatKnownIds = null;
         let userListSeq = 0;
-        let ADMIN_PASSWORD = null; // 从数据库读取，不硬编码默认值
+        let ADMIN_PASSWORD = null; // 从数据库读取，无则使用默认值
+        const DEFAULT_ADMIN_PASSWORD = 'admin123'; // 默认密码（首次使用需修改）
 
         // 登录
         async function checkPassword() {
@@ -770,6 +771,8 @@
                 const { data } = await sb.from('config').select('value').eq('key', 'admin_password').single();
                 if (data?.value) ADMIN_PASSWORD = data.value;
             } catch(e) {}
+            // 如果数据库无配置，使用默认密码
+            if (!ADMIN_PASSWORD) ADMIN_PASSWORD = DEFAULT_ADMIN_PASSWORD;
             
             if (val === ADMIN_PASSWORD) {
                 sessionStorage.setItem('adminAuthenticated', 'true');
