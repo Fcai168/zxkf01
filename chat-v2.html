@@ -704,7 +704,8 @@
         
         function updateSendButton() {
             const btn = document.getElementById('sendBtn');
-            if (btn) {
+            const input = document.getElementById('messageInput');
+            if (btn && input) {
                 btn.disabled = !isOnline || (!input.value.trim() && !pendingImage);
                 if (!isOnline) btn.title = '网络已断开';
                 else btn.title = '发送消息';

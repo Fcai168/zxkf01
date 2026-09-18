@@ -756,7 +756,7 @@
         let chatSeq = 0;
         let chatKnownIds = null;
         let userListSeq = 0;
-        let ADMIN_PASSWORD = 'admin123';
+        let ADMIN_PASSWORD = null; // 从数据库读取，不硬编码默认值
 
         // 登录
         async function checkPassword() {
@@ -900,11 +900,12 @@
                             const fresh = data.filter(m => !chatKnownIds.has(m.id));
                             if (fresh.length > 0) {
                                 const container = document.getElementById('chatMessages');
+                                // 批量标记已读（优化：一次请求代替多次）
+                                const unreadIds = fresh.filter(m => m.from_role === 'visitor' && m.status !== 'read').map(m => m.id);
+                                if (unreadIds.length > 0) {
+                                    await sb.from('messages').update({status: 'read'}).in('id', unreadIds).catch(() => {});
+                                }
                                 for (const msg of fresh) {
-                                    if (msg.from_role === 'visitor' && msg.status !== 'read') {
-                                        // 新访客消息，标记已读
-                                        await sb.from('messages').update({status: 'read'}).eq('id', msg.id);
-                                    }
                                     container.insertAdjacentHTML('beforeend', msgHtml(msg).replace('class="msg ', 'class="msg msg-new '));
                                     chatKnownIds.add(msg.id);
                                 }
@@ -1088,6 +1089,22 @@
         function handleLogo(event) {
             const file = event.target.files[0];
             if (!file) return;
+            
+            // 类型校验
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('只支持 JPG/PNG/WEBP/GIF 格式');
+                event.target.value = '';
+                return;
+            }
+            
+            // 大小校验（最大1MB）
+            if (file.size > 1 * 1024 * 1024) {
+                alert('图片大小不能超过1MB');
+                event.target.value = '';
+                return;
+            }
+            
             const reader = new FileReader();
             reader.onload = async function(e) {
                 agentImage = await compressImage(e.target.result, 300, 0.85);
