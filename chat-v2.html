@@ -486,7 +486,7 @@
                         .select('*')
                         .eq('visitor_id', currentVisitorId)
                         .order('created_at', {ascending: false})
-                        .limit(15); // 15条：2秒周期内超过5条也不会漏消息（旧消息由msgId去重兜底）
+                        .limit(5); // 每次取5条，避免重复消息
                     
                     if (error || !data || data.length === 0) return;
                     
