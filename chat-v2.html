@@ -689,8 +689,59 @@
             });
         }
 
+        // 网络状态检测
+        let isOnline = navigator.onLine;
+        window.addEventListener('online', () => { 
+            isOnline = true; 
+            updateSendButton();
+            showNotification('网络已恢复', 'success');
+        });
+        window.addEventListener('offline', () => { 
+            isOnline = false; 
+            updateSendButton();
+            showNotification('网络已断开，无法发送消息', 'error');
+        });
+        
+        function updateSendButton() {
+            const btn = document.getElementById('sendBtn');
+            if (btn) {
+                btn.disabled = !isOnline || !input.value.trim() && !pendingImage;
+                btn.title = isOnline ? '发送消息' : '网络已断开';
+            }
+        }
+        
+        function showNotification(msg, type) {
+            let notif = document.getElementById('networkNotification');
+            if (!notif) {
+                notif = document.createElement('div');
+                notif.id = 'networkNotification';
+                notif.style.cssText = `
+                    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+                    padding: 12px 24px; border-radius: 8px; font-size: 14px;
+                    z-index: 10000; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                    transition: opacity 0.3s;
+                `;
+                document.body.appendChild(notif);
+            }
+            notif.textContent = msg;
+            notif.style.background = type === 'error' ? '#e53935' : '#4caf50';
+            notif.style.color = '#fff';
+            notif.style.opacity = '1';
+            setTimeout(() => { notif.style.opacity = '0'; }, 3000);
+        }
+        
         // 初始化
         async function init() {
+            // 检查网络
+            if (!isOnline) {
+                const loading = document.querySelector('.loading');
+                if (loading) {
+                    loading.innerHTML = '<div class="loading-spinner"></div>网络未连接，请检查网络后刷新重试';
+                    loading.style.color = '#e53935';
+                }
+                return;
+            }
+            
             await getOrCreateVisitor();
             await loadMessages();
             await loadSiteConfig(); // 读取后台上传的logo/标题
