@@ -844,7 +844,8 @@
                     .map(g => ({...g, status: now - g.last < ONLINE_MS ? 'online' : 'offline', name: '访客 ' + g.id.slice(-4).toUpperCase()}))
                     .sort((a, b) => b.last - a.last);
                 
-                const filtered = currentTab === 'online' ? users.filter(u => u.status === 'online') : users;
+                // 办理中：显示所有有消息的用户（不限在线状态）
+                const filtered = currentTab === 'online' ? users : users;
                 
                 if (filtered.length === 0) {
                     list.innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--text-secondary)"><div style="font-size:32px;margin-bottom:12px;opacity:0.5">📭</div>暂无用户</div>';
