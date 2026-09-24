@@ -69,6 +69,11 @@ function createMockSb() {
         eq: (col, val) => {
           data[table] = data[table].filter(m => m[col] !== val);
           return Promise.resolve({ data: null, error: null });
+        },
+        lt: (col, val) => {
+          // Less than - delete records where col < val
+          data[table] = data[table].filter(m => new Date(m[col]) >= new Date(val));
+          return Promise.resolve({ data: null, error: null });
         }
       }),
       upsert: (row) => {
