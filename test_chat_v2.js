@@ -20,21 +20,20 @@ function assert(cond, name) {
 function createMockSb() {
   const data = { messages: [], typing_status: [], config: [] };
   let idCounter = 1;
-  
+
   return {
     from: (table) => ({
-      select: () => ({
+      select: (cols) => ({
         eq: (col, val) => ({
           order: (col2, opts) => ({
-            limit: (n) => Promise.resolve({ data: data[table] || [], error: null })
+            limit: (n) => Promise.resolve({ data: (data[table] || []).filter(m => m[col] === val), error: null })
           }),
           single: () => Promise.resolve({
-            data: data[table]?.[0] || null,
+            data: (data[table] || []).find(m => m[col] === val) || null,
             error: null
           }),
           in: (col2, vals) => {
-            // Filter by column in values array
-            const filtered = data[table].filter(m => vals.includes(m[col2]));
+            const filtered = (data[table] || []).filter(m => vals.includes(m[col2]));
             return Promise.resolve({ data: filtered, error: null });
           }
         }),
@@ -45,12 +44,12 @@ function createMockSb() {
             error: null
           }),
           in: (col2, vals) => {
-            const filtered = data[table].filter(m => vals.includes(m[col2]));
+            const filtered = (data[table] || []).filter(m => vals.includes(m[col2]));
             return Promise.resolve({ data: filtered, error: null });
           }
         }),
         in: (col, vals) => {
-          const filtered = data[table].filter(m => vals.includes(m[col]));
+          const filtered = (data[table] || []).filter(m => vals.includes(m[col]));
           return Promise.resolve({ data: filtered, error: null });
         }
       }),
@@ -60,8 +59,12 @@ function createMockSb() {
         return Promise.resolve({ data: null, error: null });
       },
       update: (vals) => ({
-        in: (col, vals2) => {
-          data[table].forEach(m => { if (vals2.includes(m.id)) Object.assign(m, vals); });
+        eq: (col, val) => {
+          data[table].forEach(m => { if (m[col] === val) Object.assign(m, vals); });
+          return Promise.resolve({ data: null, error: null });
+        },
+        in: (col, vals) => {
+          data[table].forEach(m => { if (vals.includes(m[col])) Object.assign(m, vals); });
           return Promise.resolve({ data: null, error: null });
         }
       }),
@@ -71,8 +74,11 @@ function createMockSb() {
           return Promise.resolve({ data: null, error: null });
         },
         lt: (col, val) => {
-          // Less than - delete records where col < val
           data[table] = data[table].filter(m => new Date(m[col]) >= new Date(val));
+          return Promise.resolve({ data: null, error: null });
+        },
+        in: (col, vals) => {
+          data[table] = data[table].filter(m => !vals.includes(m[col]));
           return Promise.resolve({ data: null, error: null });
         }
       }),
@@ -93,10 +99,39 @@ function loadPage(htmlPath, mockSb) {
   html = html.replace(/<script src="supabase\.js".*?<\/script>/gi, '');
   html = html.replace(/<script src="https:\/\/cdn\.jsdelivr.*?<\/script>/gi, '');
   html = html.replace(/<script src="https:\/\/unpkg\.com.*?<\/script>/gi, '');
-  
+
   // Fix CSS syntax errors in admin-v2.html (duplicate cursor: not-allowed)
   html = html.replace(/cursor: not-allowed;\s*\n\s*\}\s*\n\s*\}/g, 'cursor: not-allowed; }\n        }');
-  
+
+  // Mock crypto.subtle for hashPassword in test environment
+  const cryptoMock = {
+    subtle: {
+      digest: async (algorithm, data) => {
+        // Simple hash for testing (not real SHA-256, but consistent)
+        let hash = 0;
+        const str = new TextDecoder().decode(data);
+        for (let i = 0; i < str.length; i++) {
+          const char = str.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash;
+        }
+        const hashArray = Array.from({length: 32}, (_, i) => (hash >> (i * 8)) & 0xff);
+        return new Uint8Array(hashArray).buffer;
+      }
+    }
+  };
+
+  // 创建完整的sessionStorage mock（使用真实属性描述符）
+  const mockStorageData = {};
+  const mockStorage = {
+    getItem(key) { return mockStorageData[key] || null; },
+    setItem(key, value) { mockStorageData[key] = String(value); },
+    removeItem(key) { delete mockStorageData[key]; },
+    clear() { Object.keys(mockStorageData).forEach(k => delete mockStorageData[k]); },
+    get length() { return Object.keys(mockStorageData).length; },
+    key(n) { const keys = Object.keys(mockStorageData); return keys[n] || null; }
+  };
+
   const dom = new JSDOM(html, {
     url: 'http://localhost/',
     runScripts: 'dangerously',
@@ -104,6 +139,16 @@ function loadPage(htmlPath, mockSb) {
     beforeParse(window) {
       window.supabase = { createClient: () => mockSb };
       window.location.reload = () => {};
+      // 注入crypto mock
+      if (!window.crypto) window.crypto = cryptoMock;
+      else window.crypto.subtle = cryptoMock.subtle;
+      // 使用Object.defineProperty确保sessionStorage不可覆盖
+      Object.defineProperty(window, 'sessionStorage', {
+        value: mockStorage,
+        writable: false,
+        configurable: false,
+        enumerable: false
+      });
     }
   });
   return dom;
@@ -214,9 +259,24 @@ async function runTests() {
   adminSb._getData('config').push({key:'admin_password', value:'admin123'});
   
   AW.document.getElementById('passwordInput').value = 'admin123';
+  console.log('  [DEBUG] 调用checkPassword前:');
+  console.log('    - loginOverlay存在:', AW.document.getElementById('loginOverlay') !== null);
+  console.log('    - mainInterface存在:', AW.document.getElementById('mainInterface') !== null);
+  console.log('    - passwordInput值:', AW.document.getElementById('passwordInput').value);
+
   await AW.checkPassword(); // checkPassword是async，必须await等待结果
-  assert(AW.document.getElementById('loginOverlay').style.display === 'none', '登录成功后遮罩隐藏');
-  assert(AW.document.getElementById('mainInterface').style.display === 'flex', '登录成功后主界面显示');
+  console.log('  [DEBUG] checkPassword返回后:');
+  console.log('    - sessionStorage.adminAuthenticated:', AW.sessionStorage.getItem('adminAuthenticated'));
+
+  // 等待async操作完成和DOM更新
+  await new Promise(r => setTimeout(r, 300));
+  console.log('  [DEBUG] 等待300ms后:');
+  console.log('    - loginOverlay.style.display:', AW.document.getElementById('loginOverlay')?.style.display);
+  console.log('    - mainInterface.style.display:', AW.document.getElementById('mainInterface')?.style.display);
+  console.log('    - sessionStorage.adminAuthenticated:', AW.sessionStorage.getItem('adminAuthenticated'));
+
+  assert(AW.document.getElementById('loginOverlay')?.style.display === 'none', '登录成功后遮罩隐藏');
+  assert(AW.document.getElementById('mainInterface')?.style.display === 'flex', '登录成功后主界面显示');
   assert(AW.sessionStorage.getItem('adminAuthenticated') === 'true', '登录状态存储到sessionStorage');
   
   AW.document.getElementById('passwordInput').value = 'wrong';
@@ -266,7 +326,7 @@ async function runTests() {
   console.log('\n16. 后台图片处理测试');
   assert(typeof AW.handleAgentFile === 'function', 'handleAgentFile函数存在');
   assert(typeof AW.removeAgentImg === 'function', 'removeAgentImg函数存在');
-  assert(adminHtml.includes('compressImage(dataUrl, 900'), '压缩最大宽度900px');
+  assert(adminHtml.includes('compressImage(dataUrl, 900') || adminHtml.includes('compressImage(e.target.result, 900'), '压缩最大宽度900px');
 
   // ===== 边界条件 =====
   console.log('\n' + '='.repeat(60));
@@ -357,7 +417,7 @@ async function runTests() {
   assert(W.document.querySelectorAll('.quick-btn').length >= 3, '至少3个快捷按钮');
   assert(W.document.getElementById('fileInput').accept === 'image/*', '前台文件输入限制图片');
   assert(AW.document.getElementById('agentFileInput').accept === 'image/*', '后台文件输入限制图片');
-  assert(AW.document.querySelector('.top-btn[onclick*="logout"]') !== null, '退出按钮存在');
+  assert(AW.document.querySelector('.topbar-btn[onclick*="logout"]') !== null, '退出按钮存在');
   
   // 版本号检查
   assert(adminHtml.includes('v8') || adminHtml.includes('v6'), '版本号存在');
