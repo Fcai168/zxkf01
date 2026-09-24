@@ -1,6 +1,6 @@
 // Supabase客户端配置
 const SUPABASE_URL = 'https://qafwjrfozumfzhrbtuue.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhZndaamZvem1memhyaHR1dWV8ZW50Ijoic3VwYWJhc2UtYW5vbiIsImlhdCI6MTc4NzY5NTg3NCwiZXhwIjoyMTAzMjcxODc0fQ.vztS1Ar2ec9bnWuhdVUS76dF04PnJjDWBVnWZKuOB4I';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhZndqcmZvenVtZnpocmJ0dXVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NDk0NjQsImV4cCI6MjEwMTUyNTQ2NH0.vztS1Ar2ec9bnWuhdVUS76dF04PnJjDWBVnWZKuOB4I';
 
 // 创建客户端（浏览器环境）
 if (typeof window !== 'undefined') {
