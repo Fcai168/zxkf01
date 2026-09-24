@@ -509,10 +509,22 @@
         .back-btn-settings {
             background: none;
             border: none;
-            font-size: 20px;
-            cursor: pointer;
             color: var(--primary);
-            padding: 4px 8px;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .back-btn-settings:hover {
+            background: var(--primary-light);
+            transform: translateX(-3px);
+        }
+        .back-btn-settings:active {
+            transform: scale(0.95);
         }
         .settings-content {
             flex: 1;

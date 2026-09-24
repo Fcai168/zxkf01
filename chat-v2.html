@@ -317,6 +317,8 @@
             .attach-btn { width: 40px; height: 40px; font-size: 18px; }
             .send-btn { width: 56px; height: 40px; font-size: 14px; }
             #messageInput { font-size: 14px; min-height: 40px; }
+            /* 手机版图片预览优化 */
+            .image-preview img { max-height: 150px; }
         }
 
         /* ===== 电脑版响应式（≥768px）===== */
@@ -388,7 +390,7 @@
             <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
             <div class="input-wrapper">
                 <div class="image-preview" id="imagePreview">
-                    <img id="previewImg" src="" alt="">
+                    <img id="previewImg" src="" alt="预览图片" onclick="showLightbox(this.src)" loading="lazy">
                     <button class="image-remove" onclick="removeImage()">✕</button>
                 </div>
                 <textarea id="messageInput" placeholder="输入文字..." rows="1"></textarea>
@@ -897,6 +899,23 @@
                 toast.classList.remove('show');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
+        }
+
+        // 图片大图预览
+        function showLightbox(src) {
+            if (!src) return;
+            const lightbox = document.createElement('div');
+            lightbox.className = 'image-lightbox';
+            lightbox.innerHTML = `
+                <button class="image-lightbox-close" onclick="this.parentElement.classList.remove('show')">✕</button>
+                <div class="image-lightbox-loading">加载中...</div>
+                <img src="${src}" alt="大图预览" onload="this.previousElementSibling.style.display='none'">
+            `;
+            lightbox.addEventListener('click', (e) => {
+                if (e.target === lightbox) lightbox.classList.remove('show');
+            });
+            document.body.appendChild(lightbox);
+            requestAnimationFrame(() => lightbox.classList.add('show'));
         }
     </script>
 </body>
