@@ -402,8 +402,9 @@
             const arr = new Uint8Array(3);
             crypto.getRandomValues(arr);
             return 'v-' + Array.from(arr).map(b => b.toString(36).padStart(2, '0')).join('').slice(0, 6);
-        window.generateVisitorId = generateVisitorId;
         }
+        // 暴露给window供测试使用
+        window.generateVisitorId = generateVisitorId;
 
         // 获取或创建访客
         async function getOrCreateVisitor() {
