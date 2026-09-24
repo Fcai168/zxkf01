@@ -201,11 +201,11 @@ async function runTests() {
   console.log('\n' + '='.repeat(60));
   console.log('【模块2: 后台管理页面 admin-v2.html】');
   const adminSb = createMockSb();
-  const adminDom = loadPage(path.join(__dirname, 'admin-v2.html'), adminSb);
+  const adminDom = loadPage(path.join(__dirname, 'admin-v2.new.html'), adminSb);
   const AW = adminDom.window;
 
   console.log('\n8. 登录功能测试');
-  const adminHtml = fs.readFileSync(path.join(__dirname, 'admin-v2.html'), 'utf8');
+  const adminHtml = fs.readFileSync(path.join(__dirname, 'admin-v2.new.html'), 'utf8');
   assert(adminHtml.includes("ADMIN_PASSWORD = 'admin123'"), '管理员密码为admin123');
   assert(typeof AW.loginClick === 'function', 'loginClick函数存在');
   assert(typeof AW.checkPassword === 'function', 'checkPassword函数存在');

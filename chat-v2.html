@@ -382,8 +382,8 @@
         // Supabase 配置
         // 注意：SUPABASE_ANON_KEY 是公开的（客户端必须），请确保RLS策略已启用
         // 如需隐藏，应通过后端API代理而非直接暴露在前端
-        const SUPABASE_URL = 'https://qafwjrfozumfzhrbtuue.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhZndaamZvem1memhyaHR1dWV8ZW50Ijoic3VwYWJhc2UtYW5vbiIsImlhdCI6MTc4NzY5NTg3NCwiZXhwIjoyMTAzMjcxODc0fQ.vztS1Ar2ec9bnWuhdVUS76dF04PnJjDWBVnWZKuOB4I';
+        const SUPABASE_URL = 'https://yqvxahnjzlsaupyfqmeo.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxdnhhaG5qemxzYXVweWZxbWVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2OTU4NzQsImV4cCI6MjEwMzI3MTg3NH0.yIGP6TEOywhCj38A9uLJGeNAfrhulPjHeeo49PuH_74';
         
         let sb;
         try {
@@ -414,7 +414,7 @@
         async function loadMessages() {
             // 倒序取最近50条再反转：老访客的历史+图片不会全量拉下来（首屏秒开）
             const { data, error } = await sb
-                .from('messages')
+                .from('chat_messages')
                 .select('*')
                 .eq('visitor_id', currentVisitorId)
                 .order('created_at', { ascending: false })
@@ -476,7 +476,7 @@
             async function checkNewMessages() {
                 try {
                     const { data, error } = await sb
-                        .from('messages')
+                        .from('chat_messages')
                         .select('*')
                         .eq('visitor_id', currentVisitorId)
                         .order('created_at', {ascending: false})
@@ -550,7 +550,7 @@
             const msgId = 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
             let insertError = null;
             try {
-                const { error } = await sb.from('messages').insert({
+                const { error } = await sb.from('chat_messages').insert({
                     id: msgId,
                     visitor_id: currentVisitorId,
                     from_role: 'visitor',
