@@ -255,28 +255,18 @@ async function runTests() {
   assert(typeof AW.loginClick === 'function', 'loginClick函数存在');
   assert(typeof AW.checkPassword === 'function', 'checkPassword函数存在');
   
-  // 预置config表里的admin_password，避免loadAdminPassword因mock不支持.single()而失败
-  adminSb._getData('config').push({key:'admin_password', value:'admin123'});
+  // 预置哈希后的密码（关键：必须哈希后存入，不能存明文）
+  const hashedPassword = await AW.hashPassword('admin123');
+  adminSb._getData('config').push({key:'admin_password_hash', value: hashedPassword});
   
   AW.document.getElementById('passwordInput').value = 'admin123';
-  console.log('  [DEBUG] 调用checkPassword前:');
-  console.log('    - loginOverlay存在:', AW.document.getElementById('loginOverlay') !== null);
-  console.log('    - mainInterface存在:', AW.document.getElementById('mainInterface') !== null);
-  console.log('    - passwordInput值:', AW.document.getElementById('passwordInput').value);
-
   await AW.checkPassword(); // checkPassword是async，必须await等待结果
-  console.log('  [DEBUG] checkPassword返回后:');
-  console.log('    - sessionStorage.adminAuthenticated:', AW.sessionStorage.getItem('adminAuthenticated'));
-
+  
   // 等待async操作完成和DOM更新
-  await new Promise(r => setTimeout(r, 300));
-  console.log('  [DEBUG] 等待300ms后:');
-  console.log('    - loginOverlay.style.display:', AW.document.getElementById('loginOverlay')?.style.display);
-  console.log('    - mainInterface.style.display:', AW.document.getElementById('mainInterface')?.style.display);
-  console.log('    - sessionStorage.adminAuthenticated:', AW.sessionStorage.getItem('adminAuthenticated'));
-
-  assert(AW.document.getElementById('loginOverlay')?.style.display === 'none', '登录成功后遮罩隐藏');
-  assert(AW.document.getElementById('mainInterface')?.style.display === 'flex', '登录成功后主界面显示');
+  await new Promise(r => setTimeout(r, 200));
+  
+  assert(AW.document.getElementById('loginOverlay').style.display === 'none', '登录成功后遮罩隐藏');
+  assert(AW.document.getElementById('mainInterface').style.display === 'flex', '登录成功后主界面显示');
   assert(AW.sessionStorage.getItem('adminAuthenticated') === 'true', '登录状态存储到sessionStorage');
   
   AW.document.getElementById('passwordInput').value = 'wrong';
