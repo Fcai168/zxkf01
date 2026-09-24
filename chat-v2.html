@@ -414,7 +414,7 @@
         async function loadMessages() {
             // 倒序取最近50条再反转：老访客的历史+图片不会全量拉下来（首屏秒开）
             const { data, error } = await sb
-                .from('chat_messages')
+                .from('messages')
                 .select('*')
                 .eq('visitor_id', currentVisitorId)
                 .order('created_at', { ascending: false })
@@ -476,7 +476,7 @@
             async function checkNewMessages() {
                 try {
                     const { data, error } = await sb
-                        .from('chat_messages')
+                        .from('messages')
                         .select('*')
                         .eq('visitor_id', currentVisitorId)
                         .order('created_at', {ascending: false})
@@ -550,7 +550,7 @@
             const msgId = 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
             let insertError = null;
             try {
-                const { error } = await sb.from('chat_messages').insert({
+                const { error } = await sb.from('messages').insert({
                     id: msgId,
                     visitor_id: currentVisitorId,
                     from_role: 'visitor',
