@@ -775,13 +775,10 @@
             } catch(e) {}
             // 如果数据库无配置，使用默认密码哈希
             if (!ADMIN_PASSWORD) {
-                const encoder = new TextEncoder();
-                const data = encoder.encode(DEFAULT_ADMIN_PASSWORD);
-                const hash = btoa(String.fromCharCode(...new Uint8Array(data)));
-                ADMIN_PASSWORD = hash;
+                ADMIN_PASSWORD = await hashPassword(DEFAULT_ADMIN_PASSWORD);
             }
             
-            const inputHash = btoa(val);
+            const inputHash = await hashPassword(val);
             if (inputHash === ADMIN_PASSWORD) {
                 sessionStorage.setItem('adminAuthenticated', 'true');
                 document.getElementById('loginOverlay').style.display = 'none';
@@ -1172,7 +1169,7 @@
         });
 
         document.getElementById('agentInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
+            if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
                 e.preventDefault();
                 agentSend();
             }
@@ -1182,6 +1179,15 @@
         document.getElementById('passwordInput').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') checkPassword();
         });
+
+        // 密码哈希函数（使用Web Crypto API）
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
 
         // 初始化 - 直接调用，不等待load事件
         if (sessionStorage.getItem('adminAuthenticated')) {
