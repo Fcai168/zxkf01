@@ -300,6 +300,25 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* ===== 手机版响应式（≤480px）===== */
+        @media (max-width: 480px) {
+            .chat-container {
+                border-radius: 0;
+                max-width: 100%;
+            }
+            .chat-header { padding: 12px 14px; }
+            .header-logo { width: 36px; height: 36px; font-size: 18px; }
+            .header-info h1 { font-size: 15px; }
+            .chat-messages { padding: 12px 10px; gap: 8px; }
+            .message { font-size: 13px; padding: 10px 12px; max-width: 85%; }
+            .quick-options { padding: 10px 14px; }
+            .quick-btn { font-size: 12px; padding: 6px 12px; }
+            .chat-input { padding: 10px 14px; }
+            .attach-btn { width: 40px; height: 40px; font-size: 18px; }
+            .send-btn { width: 56px; height: 40px; font-size: 14px; }
+            #messageInput { font-size: 14px; min-height: 40px; }
+        }
+
         /* ===== 电脑版响应式（≥768px）===== */
         @media (min-width: 768px) {
             body {
@@ -532,13 +551,13 @@
             
             // 检查sb是否初始化
             if (!sb) {
-                alert('数据库连接失败，请刷新页面重试');
+                showToast('数据库连接失败，请刷新页面重试', 'error');
                 return;
             }
             
             // 检查visitor_id是否存在
             if (!currentVisitorId) {
-                alert('访客ID获取失败，请刷新页面重试');
+                showToast('访客ID获取失败，请刷新页面重试', 'error');
                 return;
             }
             
@@ -571,7 +590,7 @@
             
             if (insertError) {
                 console.error('发送失败:', insertError);
-                alert('发送失败：' + (insertError.message || '未知错误') + '，请重试');
+                showToast('发送失败：' + (insertError.message || '未知错误') + '，请重试', 'error');
                 return;
             }
             
@@ -616,13 +635,13 @@
             // 安全：只允许真实图片格式（白名单，拒绝svg/text等可执行脚本的格式）
             const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
             if (!allowedTypes.includes(file.type)) {
-                alert('只支持 JPG/PNG/WEBP/GIF 格式的图片');
+                showToast('只支持 JPG/PNG/WEBP/GIF 格式的图片', 'error');
                 event.target.value = '';
                 return;
             }
             
             if (file.size > 5 * 1024 * 1024) {
-                alert('图片大小不能超过5MB');
+                showToast('图片大小不能超过5MB', 'error');
                 event.target.value = '';
                 return;
             }
@@ -631,7 +650,7 @@
             reader.onload = async function(e) {
                 pendingImage = await compressImage(e.target.result, 900, 0.7);
                 if (!pendingImage) {
-                    alert('图片处理失败，请换一张试试');
+                    showToast('图片处理失败，请换一张试试', 'error');
                     event.target.value = '';
                     return;
                 }
@@ -639,7 +658,7 @@
                 document.getElementById('imagePreview').classList.add('active');
             };
             reader.onerror = () => {
-                alert('读取图片失败，请换一张试试');
+                showToast('读取图片失败，请换一张试试', 'error');
                 event.target.value = '';
             };
             reader.readAsDataURL(file);
@@ -865,6 +884,19 @@
             }, 15000);
         } else {
             document.getElementById('chatMessages').innerHTML = '<div class="loading">加载聊天系统失败，请刷新重试</div>';
+        }
+
+        // Toast提示函数
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
     </script>
 </body>
