@@ -470,15 +470,23 @@
         function startMessagePoll() {
             // 记录最后一条消息的时间戳
             let lastMsgTime = null;
+            let retryCount = 0;
+            const BASE_INTERVAL = 2000;
+            const MAX_INTERVAL = 30000;
             
             // 立即检查一次
             checkNewMessages();
             
-            // 每2秒检查一次
-            messagePollTimer = setInterval(checkNewMessages, 2000);
+            // 每2秒检查一次（带指数退避）
+            messagePollTimer = setInterval(async () => {
+                await checkNewMessages();
+            }, Math.min(BASE_INTERVAL * Math.pow(2, retryCount), MAX_INTERVAL));
             
             async function checkNewMessages() {
                 try {
+                    // 重置重试计数
+                    retryCount = 0;
+                    
                     const { data, error } = await sb
                         .from('messages')
                         .select('*')
@@ -486,7 +494,11 @@
                         .order('created_at', {ascending: false})
                         .limit(5); // 每次取5条，避免重复消息
                     
-                    if (error || !data || data.length === 0) return;
+                    if (error || !data || data.length === 0) {
+                        // 增加重试计数
+                        retryCount++;
+                        return;
+                    }
                     
                     // 找到最新的一条
                     const newest = data[0];
@@ -587,7 +599,9 @@
             const imgForScreen = pendingImage;
             removeImage();
             // 清除打字状态
-            sb.from('typing_status').delete().eq('visitor_id', currentVisitorId).catch(() => {});
+            sb.from('typing_status').delete().eq('visitor_id', currentVisitorId)
+                .then(() => {})
+                .catch(err => console.warn('打字状态删除失败:', err.message));
             
             // 立即上屏：不等2秒轮询，自己发的消息马上显示（轮询会按msgId去重不会重复插入）
             try {
