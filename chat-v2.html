@@ -361,9 +361,9 @@
             <div class="loading"><div class="loading-spinner"></div>正在连接客服...</div>
         </div>
         <div class="quick-options">
-            <button class="quick-btn" onclick="sendQuick('交易异常')">交易异常</button>
-            <button class="quick-btn" onclick="sendQuick('查询账单')">查询账单</button>
-            <button class="quick-btn" onclick="sendQuick('挂失补办')">挂失补办</button>
+            <button class="quick-btn" onclick="fillInput('交易异常')">交易异常</button>
+            <button class="quick-btn" onclick="fillInput('查询账单')">查询账单</button>
+            <button class="quick-btn" onclick="fillInput('挂失补办')">挂失补办</button>
         </div>
 
         <div class="chat-input">
@@ -396,6 +396,7 @@
 
         let currentVisitorId = null;
         let pendingImage = null;
+        let lastMessageId = null; // 记录最新消息ID，用于断线重连补拉
 
         // 生成访客ID（使用加密安全随机数）
         function generateVisitorId() {
@@ -432,6 +433,42 @@
             }
             
             renderMessages((data || []).reverse());
+            // 更新最后消息ID
+            if (data && data.length > 0) {
+                lastMessageId = data[data.length - 1].id;
+            }
+        }
+
+        // 断线重连：补拉丢失的消息
+        async function loadMissedMessages(afterId) {
+            if (!afterId || !sb) return;
+            try {
+                const { data, error } = await sb
+                    .from('messages')
+                    .select('*')
+                    .eq('visitor_id', currentVisitorId)
+                    .gt('id', afterId)
+                    .order('created_at', { ascending: true });
+
+                if (error || !data || data.length === 0) return;
+
+                // 追加到新消息后面
+                const container = document.getElementById('chatMessages');
+                const existingIds = new Set(Array.from(container.querySelectorAll('.message')).map(el => el.dataset.msgId));
+
+                for (const msg of data) {
+                    if (!existingIds.has(msg.id)) {
+                        appendMessage(msg);
+                    }
+                }
+
+                // 更新最后消息ID
+                if (data.length > 0) {
+                    lastMessageId = data[data.length - 1].id;
+                }
+            } catch(e) {
+                console.warn('断线重连补拉失败:', e);
+            }
         }
 
         // 智能滚动：只在用户本来就接近底部时才滚底，翻历史时不被新消息拽走
@@ -564,8 +601,24 @@
             const sendBtn = document.getElementById('sendBtn');
             sendBtn.disabled = true;
             sendBtn.textContent = '发送中...';
-            
+
             const msgId = 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+            // 如果是图片，先插入临时状态消息
+            let tempMsgElement = null;
+            if (pendingImage) {
+                const container = document.getElementById('chatMessages');
+                tempMsgElement = document.createElement('div');
+                tempMsgElement.className = 'message msg-new user message-pending';
+                tempMsgElement.dataset.msgId = msgId;
+                tempMsgElement.innerHTML = `
+                    <img src="${pendingImage}" alt="图片" style="max-width:200px;border-radius:8px;">
+                    <div class="message-time">发送中...</div>
+                `;
+                container.appendChild(tempMsgElement);
+                container.scrollTop = container.scrollHeight;
+            }
+
             let insertError = null;
             try {
                 const { error } = await sb.from('messages').insert({
@@ -580,19 +633,30 @@
                 });
                 insertError = error;
             } catch (e) {
-                insertError = { message: String(e && e.message || e) }; // 网络异常也要恢复按钮，不能卡死
+                insertError = { message: String(e && e.message || e) };
             }
 
             sending = false;
             sendBtn.disabled = !input.value.trim() && !pendingImage;
             sendBtn.textContent = '发送';
-            
+
             if (insertError) {
                 console.error('发送失败:', insertError);
+                // 更新临时消息状态（如果是图片）
+                if (tempMsgElement) {
+                    tempMsgElement.className = 'message msg-new user message-error';
+                    tempMsgElement.innerHTML = `
+                        <img src="${pendingImage}" alt="图片" style="max-width:200px;border-radius:8px;opacity:0.5;">
+                        <div class="message-time" style="color:#ef4444;">⚠️ 发送失败<br><button onclick="retrySend('${msgId}')" style="margin-top:5px;padding:4px 12px;background:#ef4444;color:#fff;border:none;border-radius:4px;cursor:pointer;">重试</button></div>
+                    `;
+                }
                 alert('发送失败：' + (insertError.message || '未知错误') + '，请重试');
                 return;
             }
-            
+
+            // 更新最后消息ID
+            lastMessageId = msgId;
+
             if (!textOverride) {
                 input.value = '';
                 input.style.height = 'auto';
@@ -604,7 +668,7 @@
             sb.from('typing_status').delete().eq('visitor_id', currentVisitorId)
                 .then(() => {})
                 .catch(err => console.warn('打字状态删除失败:', err.message));
-            
+
             // 立即上屏：不等2秒轮询，自己发的消息马上显示（轮询会按msgId去重不会重复插入）
             try {
                 const c = document.getElementById('chatMessages');
@@ -621,10 +685,41 @@
                 c.appendChild(div);
                 c.scrollTop = c.scrollHeight;
             } catch(e) { console.warn('立即上屏失败:', e); }
+
+            // 更新临时状态消息（如果是图片）
+            if (tempMsgElement && tempMsgElement.parentNode) {
+                tempMsgElement.className = 'message msg-new user';
+                tempMsgElement.innerHTML = `
+                    <img src="${pendingImage || imgForScreen}" alt="图片" style="max-width:200px;border-radius:8px;">
+                    <div class="message-time">${formatTime(new Date().toISOString())}</div>
+                `;
+            }
         }
 
-        // 快捷消息
+        // 重试发送
+        async function retrySend(msgId) {
+            const msgEl = document.querySelector(`[data-msg-id="${msgId}"]`);
+            if (!msgEl) return;
+            msgEl.remove();
+            // 重新发送，使用缓存的pendingImage
+            if (pendingImage) {
+                await sendMessage(null, true);
+            }
+        }
+
+        // 填充输入框（不再自动发送）
+        function fillInput(text) {
+            const input = document.getElementById('messageInput');
+            if (input) {
+                input.value = text;
+                input.dispatchEvent(new Event('input'));
+                input.focus();
+            }
+        }
+
+        // 快捷消息（保留兼容性）
         async function sendQuick(text) {
+            fillInput(text);
             await sendMessage(text);
         }
 
@@ -709,12 +804,49 @@
             });
         }
 
-        // 网络状态检测
-        let isOnline = navigator.onLine;
-        window.addEventListener('online', () => { 
-            isOnline = true; 
+        // 移动端键盘适配
+        function initMobileKeyboard() {
+            const isMobile = navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+            if (!isMobile) return;
+
+            const textarea = document.getElementById('messageInput');
+            if (!textarea) return;
+
+            // 添加移动端属性
+            textarea.setAttribute('enterkeyhint', 'send');
+            textarea.addEventListener('focus', () => {
+                setTimeout(() => {
+                    const viewportHeight = window.visualViewport.height;
+                    const windowHeight = window.innerHeight;
+                    if (viewportHeight < windowHeight) {
+                        const input = document.querySelector('.chat-input');
+                        if (input) {
+                            input.style.bottom = (viewportHeight - windowHeight) + 'px';
+                        }
+                    }
+                }, 300);
+            });
+
+            // 监听visualViewport变化
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', () => {
+                    const viewportHeight = window.visualViewport.height;
+                    const windowHeight = window.innerHeight;
+                    const input = document.querySelector('.chat-input');
+                    if (input) {
+                        input.style.bottom = (viewportHeight - windowHeight) + 'px';
+                    }
+                });
+            }
+        }
+        window.addEventListener('online', async () => {
+            isOnline = true;
             updateSendButton();
             showNotification('网络已恢复', 'success');
+            // 断线重连：补拉丢失的消息
+            if (lastMessageId && sb) {
+                await loadMissedMessages(lastMessageId);
+            }
         });
         window.addEventListener('offline', () => { 
             isOnline = false; 
@@ -875,6 +1007,8 @@
                     loading.style.color = '#e53935';
                 }
             });
+            // 移动端键盘适配
+            initMobileKeyboard();
             // 15秒保险：若加载提示仍未消失且没显示过失败提示，才提示用户重试
             setTimeout(() => {
                 const loading = document.querySelector('.loading');
