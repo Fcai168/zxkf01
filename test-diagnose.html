@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>后台测试版</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: sans-serif; padding: 20px; }
+        .btn { padding: 12px 24px; margin: 5px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; }
+        .btn-primary { background: #1a6fc4; color: white; }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-success { background: #10b981; color: white; }
+        .status { padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .ok { background: #d1fae5; }
+        .error { background: #fee2e2; }
+        .warn { background: #fef3c7; }
+        pre { background: #f3f4f6; padding: 15px; border-radius: 8px; overflow-x: auto; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h2>🔧 银联客服后台诊断工具</h2>
+    
+    <button class="btn btn-primary" onclick="testConnection()">测试连接</button>
+    <button class="btn btn-secondary" onclick="loadUsers()">加载访客</button>
+    <button class="btn btn-success" onclick="createTestData()">创建测试数据</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://qafwjrfozumfzhrbtuue.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhZndaamZvem1memhyaHR1dWUgInJvbGUiOiJhbm9uIiwiaWF0IjoxNzg3Njk1ODc0LCJleHAiOjIxMDMyNzE4NzR9.xlVKcXTux3jUQO7hjd9xn7nIpI1LjyfmIZz7232gwL0';
+        
+        let sb;
+        
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = 'status ' + type;
+            div.innerHTML = msg;
+            document.getElementById('results').appendChild(div);
+            console.log(type, msg);
+        }
+        
+        async function init() {
+            try {
+                const response = await fetch('/supabase.js');
+                if (response.ok) {
+                    const script = document.createElement('script');
+                    script.src = '/supabase.js';
+                    script.onload = () => {
+                        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                        log('✅ Supabase库加载成功', 'ok');
+                    };
+                    script.onerror = () => {
+                        // 尝试CDN
+                        const cdn = document.createElement('script');
+                        cdn.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/umd/supabase.js';
+                        cdn.onload = () => {
+                            sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                            log('✅ Supabase CDN加载成功', 'ok');
+                        };
+                        document.head.appendChild(cdn);
+                    };
+                    document.head.appendChild(script);
+                }
+            } catch(e) {
+                log('❌ 初始化失败: ' + e.message, 'error');
+            }
+        }
+        
+        async function testConnection() {
+            if (!sb) { log('❌ Supabase未初始化', 'error'); return; }
+            
+            try {
+                const { data, error } = await sb.from('messages').select('id').limit(1);
+                if (error) throw error;
+                log('✅ 数据库连接成功', 'ok');
+            } catch(e) {
+                log('❌ 连接失败: ' + e.message, 'error');
+            }
+        }
+        
+        async function loadUsers() {
+            if (!sb) { log('❌ Supabase未初始化', 'error'); return; }
+            
+            try {
+                const { data, error } = await sb
+                    .from('messages')
+                    .select('visitor_id, from_role, created_at')
+                    .order('created_at', { ascending: false })
+                    .limit(100);
+                
+                if (error) throw error;
+                
+                if (!data || data.length === 0) {
+                    log('⚠️ 暂无消息数据', 'warn');
+                    return;
+                }
+                
+                const visitors = {};
+                data.forEach(m => {
+                    if (!visitors[m.visitor_id]) {
+                        visitors[m.visitor_id] = { id: m.visitor_id, count: 0, last: 0 };
+                    }
+                    visitors[m.visitor_id].count++;
+                    const t = new Date(m.created_at).getTime();
+                    if (t > visitors[m.visitor_id].last) visitors[m.visitor_id].last = t;
+                });
+                
+                const list = Object.values(visitors);
+                log('✅ 找到 ' + list.length + ' 个访客', 'ok');
+                
+                let html = '<h4>访客列表:</h4><pre>';
+                list.forEach(v => {
+                    html += '- ' + v.id.slice(-8) + ' (' + v.count + '条消息, 最后' + Math.floor((Date.now() - v.last) / 60000) + '分钟前)\n';
+                });
+                html += '</pre>';
+                log(html, 'info');
+                
+            } catch(e) {
+                log('❌ 加载失败: ' + e.message, 'error');
+            }
+        }
+        
+        async function createTestData() {
+            if (!sb) { log('❌ Supabase未初始化', 'error'); return; }
+            
+            try {
+                const visitorId = 'test-' + Date.now().toString(36);
+                const { data, error } = await sb.from('messages').insert([
+                    { visitor_id: visitorId, from_role: 'visitor', content: '你好，测试消息', type: 'text', status: 'unread', created_at: new Date().toISOString() },
+                    { visitor_id: visitorId, from_role: 'agent', content: '您好，请问有什么可以帮助您的？', type: 'text', status: 'read', created_at: new Date().toISOString() }
+                ]);
+                
+                if (error) throw error;
+                log('✅ 测试数据创建成功，访客ID: ' + visitorId.slice(-8), 'ok');
+                log('现在刷新后台页面应该能看到这个访客', 'info');
+                
+            } catch(e) {
+                log('❌ 创建失败: ' + e.message, 'error');
+            }
+        }
+        
+        window.onload = init;
+    </script>
+</body>
+</html>
