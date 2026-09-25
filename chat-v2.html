@@ -40,6 +40,30 @@
             flex-shrink: 0;
             overflow: hidden;
         }
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+        .header-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .header-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .header-btn:active {
+            transform: scale(0.95);
+        }
         .chat-header::before {
             content: "";
             position: absolute;
@@ -373,6 +397,12 @@
             <div class="header-info">
                 <h1 id="headerTitle">银联客服</h1>
                 <p class="header-status"><span class="online-dot"></span>在线客服 · 08:00-22:00</p>
+            </div>
+            <div class="header-actions">
+                <button class="header-btn" onclick="newChat()" aria-label="新建聊天">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                    新建聊天
+                </button>
             </div>
         </div>
 
@@ -886,6 +916,30 @@
             }, 15000);
         } else {
             document.getElementById('chatMessages').innerHTML = '<div class="loading">加载聊天系统失败，请刷新重试</div>';
+        }
+
+        // 新建聊天
+        function newChat() {
+            if (!confirm('确定要新建聊天吗？当前聊天记录将被清空。')) {
+                return;
+            }
+            // 清除visitor_id
+            localStorage.removeItem('visitor_id');
+            // 清空消息容器
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '<div class="loading"><div class="loading-spinner"></div>正在连接客服...</div>';
+            // 清除轮询定时器
+            if (messagePollTimer) {
+                clearInterval(messagePollTimer);
+                messagePollTimer = null;
+            }
+            // 重置状态
+            currentVisitorId = null;
+            pendingImage = null;
+            document.getElementById('imagePreview').classList.remove('active');
+            document.getElementById('fileInput').value = '';
+            // 重新初始化
+            init().catch(err => console.error('初始化失败:', err));
         }
 
         // Toast提示函数
