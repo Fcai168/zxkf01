@@ -1,4 +1,2 @@
-/panel /panel/index.html 200
-/chat-v2 /chat-v2.html 200
-/chat-v2.html /chat-v2.html 200
-/  /index.html 200
+# Leave routing to Cloudflare Pages automatic handling
+# No explicit redirects needed
