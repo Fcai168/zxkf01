@@ -1,6 +1,3 @@
-/customer-service.new.html  /customer-service.new.html  200
-/admin-v2.new.html  /admin-v2.new.html  200
-/admin-v2  /admin-v2.new.html  200
-/chat-v2.html  /chat-v2.html  200
-/chat-v2  /chat-v2.html  200
-/index.html  /index.html  200
+/panel /admin-panel.html 200
+/chat-v2 /chat-v2.html 200
+/  /index.html 200
