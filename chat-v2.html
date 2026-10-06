@@ -388,6 +388,44 @@
             #messageInput { font-size: 15px; }
             .send-btn { width: 64px; height: 42px; font-size: 15px; }
         }
+
+        /* 图片灯箱 */
+        .image-lightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .image-lightbox.show { opacity: 1; }
+        .image-lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .image-lightbox-loading {
+            position: absolute;
+            color: #fff;
+            font-size: 14px;
+        }
+        .image-lightbox img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
     </style>
 </head>
 <body>
@@ -410,9 +448,9 @@
             <div class="loading"><div class="loading-spinner"></div>正在连接客服...</div>
         </div>
         <div class="quick-options">
-            <button class="quick-btn" onclick="sendQuick('交易异常')">交易异常</button>
-            <button class="quick-btn" onclick="sendQuick('查询账单')">查询账单</button>
-            <button class="quick-btn" onclick="sendQuick('挂失补办')">挂失补办</button>
+            <button class="quick-btn" onclick="sendQuick('交易异常')" aria-label="发送快捷消息：交易异常">交易异常</button>
+            <button class="quick-btn" onclick="sendQuick('查询账单')" aria-label="发送快捷消息：查询账单">查询账单</button>
+            <button class="quick-btn" onclick="sendQuick('挂失补办')" aria-label="发送快捷消息：挂失补办">挂失补办</button>
         </div>
 
         <div class="chat-input">
