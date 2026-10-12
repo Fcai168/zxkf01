@@ -1078,15 +1078,19 @@
         async function selectUser(userId) {
             currentUser = users.find(u => u.id === userId);
             if (!currentUser) return;
-            
+
             document.getElementById('chatName').textContent = currentUser.name;
             document.getElementById('chatStatus').textContent = currentUser.status === 'online' ? '在线' : '离线';
-            
-            // 移动端关闭侧栏
+
+            // 立即在聊天区显示加载中（同步执行，侧栏滑走时后面不是空白）
+            const chatBox = document.getElementById('chatMessages');
+            chatBox.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">正在加载对话...</div></div>';
+
+            // 移动端关闭侧栏（露出聊天区）
             if (window.innerWidth < 768) {
                 document.getElementById('userSidebar').classList.remove('open');
             }
-            
+
             await renderChat();
             checkTypingStatus(userId);
             
@@ -1382,8 +1386,15 @@
             return d.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'});
         }
 
+        // 聊天头"←"按钮：手机上返回访客列表（打开侧栏）；电脑上侧栏常显可忽略
         function closeSidebar() {
-            document.getElementById('userSidebar').classList.remove('open');
+            const sidebar = document.getElementById('userSidebar');
+            // 若侧栏当前是打开状态则关闭，否则打开（手机上作为"返回列表"用）
+            if (sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+            } else {
+                sidebar.classList.add('open');
+            }
         }
 
         // Toast提示函数
