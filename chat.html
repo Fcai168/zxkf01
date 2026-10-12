@@ -562,9 +562,9 @@
             
             // 立即检查一次
             checkNewMessages();
-            
-            // 每2秒检查一次
-            messagePollTimer = setInterval(checkNewMessages, 2000);
+
+            // 每5秒检查一次：省KV list额度（免费版每天仅1000次list，2秒太耗）
+            messagePollTimer = setInterval(checkNewMessages, 5000);
             
             async function checkNewMessages() {
                 try {

@@ -1014,24 +1014,12 @@
 
         async function updateUserListView(visitors) {
             const list = document.getElementById('userList');
-            // 并发查每个访客的未读数（各自带超时，单个卡住不影响其他）
-            const withStats = await Promise.all(visitors.map(async (v) => {
-                try {
-                    const res = await fetchT(`${API_BASE}/messages?visitor_id=${encodeURIComponent(v.id)}`, {}, 5000);
-                    const data = await res.json();
-                    const msgs = data.messages || [];
-                    let unread = 0, last = 0;
-                    msgs.forEach(m => {
-                        if (m.from_role === 'visitor') {
-                            const t = new Date(m.created_at).getTime();
-                            if (t > last) last = t;
-                            if (m.status !== 'read') unread++;
-                        }
-                    });
-                    return { id: v.id, last: last || new Date(v.last_active || 0).getTime(), total: msgs.length, unread: unread };
-                } catch(e) {
-                    return { id: v.id, last: new Date(v.last_active || 0).getTime(), total: 0, unread: 0 };
-                }
+            // 直接用后端返回的未读数（不再逐个访客拉messages，省KV list额度）
+            const withStats = visitors.map(v => ({
+                id: v.id,
+                last: new Date(v.last_active || 0).getTime(),
+                total: 0,
+                unread: v.unread || 0
             }));
 
             const now = Date.now();
@@ -1136,7 +1124,7 @@
                     }
                     renderUserList();
                 } catch(e) { console.warn('轮询消息失败(网络慢):', e.message || e); }
-            }, 2000);
+            }, 5000);  // 5秒轮询：省KV list额度（免费版每天仅1000次list）
         }
 
         function msgHtml(m) {

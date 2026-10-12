@@ -15,6 +15,21 @@ export async function onRequestGet(context) {
 
     const visitorIds = await env.PANEL_KV.get('chat:visitors', { type: 'json' }) || [];
 
+    // 一次 list 所有消息，算出每个访客的未读数（避免前端逐个访客再list，省大量额度）
+    let unreadMap = {};
+    try {
+      const allKeys = await env.PANEL_KV.list({ prefix: 'chat:msg:' });
+      await Promise.all((allKeys.keys || []).map(async (k) => {
+        const m = await env.PANEL_KV.get(k.name, { type: 'json' });
+        if (m && m.from_role === 'visitor' && m.status !== 'read') {
+          unreadMap[m.visitor_id] = (unreadMap[m.visitor_id] || 0) + 1;
+        }
+      }));
+    } catch (e) {
+      // list 超额度等异常时降级：未读数显示0，不影响列表本身
+      console.warn('统计未读失败(可能KV list超限):', e.message || e);
+    }
+
     // 批量查每个访客的会话信息
     const visitors = await Promise.all(
       visitorIds.map(async (vid) => {
@@ -23,7 +38,8 @@ export async function onRequestGet(context) {
           id: vid,
           created_at: session?.created_at || null,
           last_active: session?.last_active || null,
-          agent_replied: session?.agent_replied || false
+          agent_replied: session?.agent_replied || false,
+          unread: unreadMap[vid] || 0
         };
       })
     );
