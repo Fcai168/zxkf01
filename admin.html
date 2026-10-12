@@ -973,6 +973,12 @@
             document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
             el.classList.add('active');
             currentTab = type;
+            // 立即用现有数据重渲染（切换即时响应，不等网络）
+            if (users.length > 0) {
+                renderUserListView();
+            } else {
+                document.getElementById('userList').innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--text-secondary)"><div style="font-size:32px;margin-bottom:12px;opacity:0.5">⏳</div>加载中...</div>';
+            }
             renderUserList();
         }
 
@@ -985,30 +991,33 @@
             userListTimer = setInterval(async () => {
                 try {
                     const seq = ++userListSeq;
-                    const res = await fetch(`${API_BASE}/visitors?admin_key=${encodeURIComponent(ADMIN_KEY_CACHE)}`);
+                    const res = await fetchT(`${API_BASE}/visitors?admin_key=${encodeURIComponent(ADMIN_KEY_CACHE)}`, {}, 5000);
                     const data = await res.json();
                     if (seq !== userListSeq) return;
                     if (data.error) { console.error('轮询访客失败', data.error); return; }
                     await updateUserListView(data.visitors || []);
-                } catch(e) { console.error('轮询失败', e); }
+                } catch(e) { console.warn('轮询失败(网络慢，稍后自动重试):', e.message || e); }
             }, 10000);  // 10秒轮询
 
             const seq = ++userListSeq;
             try {
-                const res = await fetch(`${API_BASE}/visitors?admin_key=${encodeURIComponent(ADMIN_KEY_CACHE)}`);
+                const res = await fetchT(`${API_BASE}/visitors?admin_key=${encodeURIComponent(ADMIN_KEY_CACHE)}`, {}, 5000);
                 const data = await res.json();
                 if (seq !== userListSeq) return;
-                if (data.error) { console.error('拉取访客失败', data.error); return; }
+                if (data.error) { console.error('拉取访客失败', data.error); list.innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--text-secondary)">加载失败，请刷新重试</div>'; return; }
                 await updateUserListView(data.visitors || []);
-            } catch(e) { console.error('渲染用户列表失败', e); }
+            } catch(e) {
+                console.warn('渲染用户列表失败(网络慢):', e.message || e);
+                if (users.length === 0) list.innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--text-secondary)"><div style="font-size:32px;margin-bottom:12px;opacity:0.5">📡</div>网络较慢，自动重试中...</div>';
+            }
         }
 
         async function updateUserListView(visitors) {
             const list = document.getElementById('userList');
-            // 查每个访客的未读数
+            // 并发查每个访客的未读数（各自带超时，单个卡住不影响其他）
             const withStats = await Promise.all(visitors.map(async (v) => {
                 try {
-                    const res = await fetch(`${API_BASE}/messages?visitor_id=${v.id}`);
+                    const res = await fetchT(`${API_BASE}/messages?visitor_id=${encodeURIComponent(v.id)}`, {}, 5000);
                     const data = await res.json();
                     const msgs = data.messages || [];
                     let unread = 0, last = 0;
@@ -1021,7 +1030,7 @@
                     });
                     return { id: v.id, last: last || new Date(v.last_active || 0).getTime(), total: msgs.length, unread: unread };
                 } catch(e) {
-                    return { id: v.id, last: 0, total: 0, unread: 0 };
+                    return { id: v.id, last: new Date(v.last_active || 0).getTime(), total: 0, unread: 0 };
                 }
             }));
 
@@ -1031,13 +1040,18 @@
                 .map(g => ({...g, status: now - g.last < ONLINE_MS ? 'online' : 'offline', name: '访客 ' + g.id.slice(-4).toUpperCase()}))
                 .sort((a, b) => b.last - a.last);
 
-            // 办理中：仅显示在线用户；历史：显示全部（按最后活动时间排序）
+            renderUserListView();
+        }
+
+        // 纯渲染：用当前users数据画列表，不发请求（切换标签时即时调用）
+        function renderUserListView() {
+            const list = document.getElementById('userList');
             const filtered = currentTab === 'online'
                 ? users.filter(u => u.status === 'online')
                 : users;
 
             if (filtered.length === 0) {
-                list.innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--text-secondary)"><div style="font-size:32px;margin-bottom:12px;opacity:0.5">📭</div>暂无用户</div>';
+                list.innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--text-secondary)"><div style="font-size:32px;margin-bottom:12px;opacity:0.5">📭</div>' + (currentTab === 'online' ? '暂无进行中的访客' : '暂无历史访客') + '</div>';
                 return;
             }
 
@@ -1080,11 +1094,11 @@
             if (messagePollTimers[userId]) clearInterval(messagePollTimers[userId]);
             messagePollTimers[userId] = setInterval(async () => {
                 try {
-                    const res = await fetch(`${API_BASE}/messages?visitor_id=${encodeURIComponent(userId)}`);
+                    const res = await fetchT(`${API_BASE}/messages?visitor_id=${encodeURIComponent(userId)}`, {}, 5000);
                     const msgData = await res.json();
                     const data = (msgData.messages || []).slice().reverse();
                     if (!data || data.length === 0) return;
-                    
+
                     const visitorMsgs = data.filter(m => m.from_role === 'visitor' && m.status !== 'read');
                     const g = users.find(u => u.id === userId);
                     if (g) g.unread = visitorMsgs.length;
@@ -1102,11 +1116,11 @@
                                 // 批量标记已读（一次请求）
                                 const unreadIds = fresh.filter(m => m.from_role === 'visitor' && m.status !== 'read').map(m => m.id);
                                 if (unreadIds.length > 0) {
-                                    await fetch(`${API_BASE}/mark-read`, {
+                                    await fetchT(`${API_BASE}/mark-read`, {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({ visitor_id: userId, ids: unreadIds, admin_key: ADMIN_KEY_CACHE })
-                                    }).catch(() => {});
+                                    }, 5000).catch(() => {});
                                 }
                                 for (const msg of fresh) {
                                     container.insertAdjacentHTML('beforeend', msgHtml(msg).replace('class="msg ', 'class="msg msg-new '));
@@ -1117,7 +1131,7 @@
                         }
                     }
                     renderUserList();
-                } catch(e) { console.warn('轮询消息失败:', e); }
+                } catch(e) { console.warn('轮询消息失败(网络慢):', e.message || e); }
             }, 2000);
         }
 
@@ -1134,7 +1148,7 @@
 
             const seq = ++chatSeq;
             try {
-                const res = await fetch(`${API_BASE}/messages?visitor_id=${encodeURIComponent(currentUser.id)}`);
+                const res = await fetchT(`${API_BASE}/messages?visitor_id=${encodeURIComponent(currentUser.id)}`, {}, 5000);
                 const data = await res.json();
                 if (seq !== chatSeq) return;
                 if (data.error) throw new Error(data.error);
@@ -1145,11 +1159,11 @@
                 // 标记访客消息为已读
                 const unread = msgs.filter(m => m.from_role === 'visitor' && m.status !== 'read').map(m => m.id);
                 if (unread.length) {
-                    await fetch(`${API_BASE}/mark-read`, {
+                    await fetchT(`${API_BASE}/mark-read`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ visitor_id: currentUser.id, ids: unread, admin_key: ADMIN_KEY_CACHE })
-                    }).catch(() => {});
+                    }, 5000).catch(() => {});
                 }
 
                 container.innerHTML = msgs.length
@@ -1157,13 +1171,13 @@
                     : '<div class="empty-state"><div class="empty-state-icon">💬</div><div class="empty-state-text">暂无消息</div></div>';
                 container.scrollTop = container.scrollHeight;
             } catch(e) {
-                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">加载失败</div></div>';
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📡</div><div class="empty-state-text">网络较慢，加载失败<br>自动重试中...</div></div>';
             }
         }
 
         async function checkTypingStatus(userId) {
             try {
-                const res = await fetch(`${API_BASE}/typing?visitor_id=${encodeURIComponent(userId)}`);
+                const res = await fetchT(`${API_BASE}/typing?visitor_id=${encodeURIComponent(userId)}`, {}, 5000);
                 const data = await res.json();
                 updateTypingIndicator(data.typing ? [{ text: data.text }] : []);
             } catch(e) { console.warn('打字状态查询失败:', e); }
@@ -1207,7 +1221,7 @@
         async function doAgentSend(text, btn) {
             try {
                 const msgId = 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-                const res = await fetch(`${API_BASE}/agent-reply`, {
+                const res = await fetchT(`${API_BASE}/agent-reply`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1216,7 +1230,7 @@
                         file: agentImage,
                         admin_key: ADMIN_KEY_CACHE
                     })
-                });
+                }, 8000);
                 const data = await res.json();
                 if (data.error) throw new Error(data.error);
 
@@ -1227,13 +1241,13 @@
 
                 // 清除客服打字状态
                 try {
-                    await fetch(`${API_BASE}/typing`, {
+                    await fetchT(`${API_BASE}/typing`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ visitor_id: 'agent', text: '' })
-                    });
+                    }, 5000);
                 } catch(e) {}
-                
+
                 document.getElementById('agentInput').value = '';
                 document.getElementById('agentInput').style.height = 'auto';
                 removeAgentImg();
@@ -1241,7 +1255,7 @@
                 btn.textContent = '➤';
             } catch(e) {
                 console.error('发送失败:', e);
-                showToast('发送失败，请重试', 'error');
+                showToast(e.name === 'AbortError' ? '网络太慢，发送超时，请重试' : '发送失败，请重试', 'error');
                 btn.disabled = false;
                 btn.textContent = '➤';
             }
@@ -1285,7 +1299,7 @@
 
         async function loadConfig() {
             try {
-                const res = await fetch(`${API_BASE}/admin/password`);
+                const res = await fetchT(`${API_BASE}/admin/password`, {}, 5000);
                 const data = await res.json();
                 if (data.has_password) {
                     // 只标记存在，具体hash由checkPassword流程读取
@@ -1297,29 +1311,29 @@
             const name = document.getElementById('nameInput').value.trim();
             if (!name) return;
             try {
-                const res = await fetch(`${API_BASE}/config`, {
+                const res = await fetchT(`${API_BASE}/config`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: 'title', value: name, admin_key: ADMIN_KEY_CACHE })
-                });
+                }, 8000);
                 const data = await res.json();
                 if (data.error) throw new Error(data.error);
                 showToast('保存成功', 'success');
-            } catch(e) { showToast('保存失败: ' + e.message, 'error'); }
+            } catch(e) { showToast(e.name === 'AbortError' ? '网络太慢，保存超时请重试' : ('保存失败: ' + e.message), 'error'); }
         }
 
         async function saveLogo() {
             if (!agentImage) { showToast('请先选择图片', 'info'); return; }
             try {
-                const res = await fetch(`${API_BASE}/config`, {
+                const res = await fetchT(`${API_BASE}/config`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: 'logo', value: agentImage, admin_key: ADMIN_KEY_CACHE })
-                });
+                }, 8000);
                 const data = await res.json();
                 if (data.error) throw new Error(data.error);
                 showToast('保存成功', 'success');
-            } catch(e) { showToast('保存失败: ' + e.message, 'error'); }
+            } catch(e) { showToast(e.name === 'AbortError' ? '网络太慢，保存超时请重试' : ('保存失败: ' + e.message), 'error'); }
         }
 
         function handleLogo(event) {
@@ -1495,7 +1509,7 @@
         // 首次访问：若KV无密码则显示提示
         (async function() {
             try {
-                const res = await fetch(`${API_BASE}/admin/password`);
+                const res = await fetchT(`${API_BASE}/admin/password`, {}, 5000);
                 const data = await res.json();
                 if (!data.has_password) {
                     document.getElementById('setupHint').style.display = 'block';
