@@ -524,16 +524,17 @@
             if (nearBottom) el.scrollTop = el.scrollHeight;
         }
 
-        // 渲染消息
+        // 渲染消息（保留欢迎语/系统提示，把历史消息插在它前面）
         function renderMessages(messages) {
             const container = document.getElementById('chatMessages');
-            container.innerHTML = '';
-            
+            // 移除旧的消息气泡，但保留系统提示（system-tip）
+            container.querySelectorAll('.message').forEach(el => el.remove());
+
             messages.forEach(msg => {
                 const div = document.createElement('div');
                 div.className = `message ${msg.from_role === 'agent' ? 'agent' : 'user'}`;
                 div.dataset.msgId = msg.id; // 必须有ID标记：否则首次轮询会把最近5条当新消息重插一遍（"跳动"根因）
-                
+
                 let content = '';
                 if (msg.type === 'image' && msg.file) {
                     content += `<img src="${escapeHtml(msg.file)}" alt="图片">`;
@@ -541,9 +542,12 @@
                     content += escapeHtml(msg.content).replace(/\n/g, '<br>');
                 }
                 content += `<div class="message-time">${formatTime(msg.created_at)}</div>`;
-                
+
                 div.innerHTML = content;
-                container.appendChild(div);
+                // 插到系统提示之前（没有系统提示则append即可）
+                const tip = container.querySelector('.system-tip');
+                if (tip) container.insertBefore(div, tip);
+                else container.appendChild(div);
             });
             
             container.scrollTop = container.scrollHeight; // 首屏加载：滚到底部
@@ -828,24 +832,21 @@
                 }
                 return;
             }
-            
-            await getOrCreateVisitor();
-            await loadMessages();
-            await loadSiteConfig(); // 读取后台上传的logo/标题
-            startMessagePoll();
-            
-            // 移除加载提示
+
+            // 立即显示欢迎语 + 输入框可用（不等网络，首屏秒出）
+            const container = document.getElementById('chatMessages');
             const loading = document.querySelector('.loading');
             if (loading) loading.remove();
-            
-            // 添加欢迎消息
-            const container = document.getElementById('chatMessages');
-            if (container.children.length === 0) {
-                const tip = document.createElement('div');
-                tip.className = 'system-tip';
-                tip.textContent = '当前客服在线，预计等待 1-2 分钟';
-                container.appendChild(tip);
-            }
+            const tip = document.createElement('div');
+            tip.className = 'system-tip';
+            tip.textContent = '当前客服在线，预计等待 1-2 分钟';
+            container.appendChild(tip);
+
+            // 以下异步执行，不阻塞首屏
+            await getOrCreateVisitor();
+            await loadMessages();   // 历史消息回来后插入（loadMessages会保留欢迎语逻辑）
+            loadSiteConfig();       // logo/标题后台加载，不等待
+            startMessagePoll();
         }
         
         // 读取后台在设置里上传的logo/标题（KV: chat:config:{key}，匿名可读）

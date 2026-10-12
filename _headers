@@ -4,9 +4,37 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=()
 
+# HTML 秒开缓存：5分钟内直接用本地缓存，不再每次重新下载整个页面
+# （数据仍通过API实时获取，页面骨架走缓存不影响实时性）
 /index.html
-  Cache-Control: no-cache, no-store, must-revalidate
+  Cache-Control: public, max-age=300, must-revalidate
+
+/chat.html
+  Cache-Control: public, max-age=300, must-revalidate
 
 /admin.html
-  Cache-Control: no-cache, no-store, must-revalidate
+  Cache-Control: public, max-age=300, must-revalidate
   X-Robots-Tag: noindex, nofollow
+
+# 静态资源长缓存：7天，二次打开秒开
+/*.css
+  Cache-Control: public, max-age=604800
+
+/*.js
+  Cache-Control: public, max-age=604800
+
+/*.png
+  Cache-Control: public, max-age=604800
+
+/*.jpg
+  Cache-Control: public, max-age=604800
+
+/*.webp
+  Cache-Control: public, max-age=604800
+
+/*.svg
+  Cache-Control: public, max-age=604800
+
+# API 不缓存，保证消息实时
+/api/*
+  Cache-Control: no-store
