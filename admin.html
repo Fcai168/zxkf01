@@ -240,13 +240,21 @@
         .status-dot.online { background: var(--success); }
         .status-dot.offline { background: #9ca3af; }
         .user-info { flex: 1; min-width: 0; }
+        .user-name-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
         .user-name {
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             color: var(--text);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            flex: 1;
+            min-width: 0;
         }
         .user-meta {
             display: flex;
@@ -1040,7 +1048,10 @@
                         <span class="status-dot ${u.status}"></span>
                     </div>
                     <div class="user-info">
-                        <div class="user-name">${escapeHtml(u.name)}${u.unread > 0 ? `<span class="unread-badge">${u.unread}</span>` : ''}</div>
+                        <div class="user-name-row">
+                            <div class="user-name">${escapeHtml(u.name)}</div>
+                            ${u.unread > 0 ? `<span class="unread-badge">${u.unread > 99 ? '99+' : u.unread}</span>` : ''}
+                        </div>
                         <div class="user-meta">
                             <span class="user-status ${u.status}">${u.status === 'online' ? '在线' : '离线'}</span>
                             <span style="font-size:10px;color:var(--text-secondary)">${formatTimeShort(u.last)}</span>

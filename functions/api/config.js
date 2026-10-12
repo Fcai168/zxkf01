@@ -31,8 +31,10 @@ export async function onRequestPost(context) {
     const body = await request.json();
     const { key, value, admin_key } = body;
 
-    // 验证管理员密钥
-    if (!admin_key || admin_key !== env.ADMIN_KEY) {
+    // 验证管理员密钥：优先用KV里首次设置的key，其次用环境变量
+    const kvKey = await env.PANEL_KV.get('chat:admin:key');
+    const validKey = kvKey || env.ADMIN_KEY;
+    if (!admin_key || admin_key !== validKey) {
       return json({ error: '无权限' }, 403);
     }
 
