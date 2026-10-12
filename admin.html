@@ -818,6 +818,20 @@
     <script>
         // Cloudflare KV API 配置
         const API_BASE = '/api';
+
+        // 带超时的fetch：Cloudflare国内网络差，请求经常挂住不返回也不报错
+        // 8秒没响应就主动中断，让界面能提示"网络慢重试"而不是一直转圈
+        async function fetchT(url, options = {}, timeoutMs = 8000) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const res = await fetch(url, { ...options, signal: controller.signal });
+                return res;
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
         // 管理员密钥：内置在后台页面（仅客服知道页面地址）
         // 实际部署时由 Cloudflare 环境变量 ADMIN_KEY 校验，前端输入密码做二次校验
         let ADMIN_KEY_CACHE = null;
@@ -849,17 +863,24 @@
             const input = document.getElementById('passwordInput');
             const val = input.value.trim();
             const diagBox = document.getElementById('diagBox');
+            const loginBtn = document.getElementById('loginBtn');
             if (!val) {
                 diagBox.textContent = '请先输入密码';
                 return;
             }
-            // 查是否已设密码（失败也要提示，不能静默）
+            // 登录中：禁用按钮防重复点击
+            loginBtn.disabled = true;
+            loginBtn.textContent = '登录中...';
+            diagBox.textContent = '';
+            // 查是否已设密码
             try {
-                const res = await fetch(`${API_BASE}/admin/password`);
+                const res = await fetchT(`${API_BASE}/admin/password`, {}, 8000);
                 const data = await res.json();
                 if (data.has_password) ADMIN_PASSWORD = data.hash;
             } catch(e) {
-                diagBox.textContent = '网络连接失败，请重试';
+                loginBtn.disabled = false;
+                loginBtn.textContent = '登录';
+                diagBox.textContent = '网络太慢或超时，请再点一次登录';
                 return;
             }
             // 首次使用：KV无密码，进入设置模式
@@ -867,18 +888,22 @@
                 diagBox.textContent = '正在设置密码...';
                 const hashed = await hashPassword(val);
                 try {
-                    const res = await fetch(`${API_BASE}/admin/password`, {
+                    const res = await fetchT(`${API_BASE}/admin/password`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ admin_key: val, hash: hashed })
-                    });
+                    }, 8000);
                     const data = await res.json();
                     if (data.error) {
+                        loginBtn.disabled = false;
+                        loginBtn.textContent = '登录';
                         diagBox.textContent = '设置失败：' + data.error + '，请重试';
                         return;
                     }
                 } catch(e) {
-                    diagBox.textContent = '网络连接失败，请重试';
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = '登录';
+                    diagBox.textContent = '网络太慢或超时，请再点一次登录';
                     return;
                 }
                 // 设置成功，直接登录进入后台
@@ -901,6 +926,8 @@
                 document.getElementById('mainInterface').style.display = 'flex';
                 initApp();
             } else {
+                loginBtn.disabled = false;
+                loginBtn.textContent = '登录';
                 diagBox.textContent = '密码错误，请重试';
                 input.style.borderColor = 'var(--danger)';
                 setTimeout(() => input.style.borderColor = '', 2000);
