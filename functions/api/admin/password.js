@@ -1,11 +1,11 @@
 // GET /api/admin/password
-// 查询是否已设置管理员密码（不返回hash本身，只返回是否存在）
-// 注意：此处为公开端点，仅用于判断首次设置，hash不会泄露
+// 查询管理员密码hash供登录比对
+// 说明：返回的是SHA-256单向hash（无法反推原文），仅用于前端比对登录
 export async function onRequestGet(context) {
   const { env } = context;
   try {
     const hash = await env.PANEL_KV.get('chat:admin:password_hash');
-    return json({ has_password: !!hash });
+    return json({ has_password: !!hash, hash: hash || null });
   } catch (e) {
     return json({ error: '服务器错误: ' + e.message }, 500);
   }

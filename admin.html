@@ -848,29 +848,48 @@
         async function checkPassword() {
             const input = document.getElementById('passwordInput');
             const val = input.value.trim();
+            const diagBox = document.getElementById('diagBox');
             if (!val) {
-                document.getElementById('diagBox').textContent = '请先输入密码';
+                diagBox.textContent = '请先输入密码';
                 return;
             }
+            // 查是否已设密码（失败也要提示，不能静默）
             try {
                 const res = await fetch(`${API_BASE}/admin/password`);
                 const data = await res.json();
                 if (data.has_password) ADMIN_PASSWORD = data.hash;
-            } catch(e) {}
+            } catch(e) {
+                diagBox.textContent = '网络连接失败，请重试';
+                return;
+            }
             // 首次使用：KV无密码，进入设置模式
             if (!ADMIN_PASSWORD) {
+                diagBox.textContent = '正在设置密码...';
                 const hashed = await hashPassword(val);
-                // 首次设置：把密码hash存KV，同时设置ADMIN_KEY
-                await fetch(`${API_BASE}/admin/password`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ admin_key: val, hash: hashed })
-                });
+                try {
+                    const res = await fetch(`${API_BASE}/admin/password`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ admin_key: val, hash: hashed })
+                    });
+                    const data = await res.json();
+                    if (data.error) {
+                        diagBox.textContent = '设置失败：' + data.error + '，请重试';
+                        return;
+                    }
+                } catch(e) {
+                    diagBox.textContent = '网络连接失败，请重试';
+                    return;
+                }
+                // 设置成功，直接登录进入后台
                 ADMIN_PASSWORD = hashed;
+                ADMIN_KEY_CACHE = val;
+                sessionStorage.setItem('adminAuthenticated', 'true');
+                sessionStorage.setItem('adminKeyCache', val);
                 document.getElementById('setupHint').style.display = 'block';
-                document.getElementById('diagBox').textContent = '✅ 密码已保存，请重新登录';
-                input.value = '';
-                document.getElementById('loginBtn').textContent = '重新登录';
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('mainInterface').style.display = 'flex';
+                initApp();
                 return;
             }
             const inputHash = await hashPassword(val);
@@ -882,7 +901,7 @@
                 document.getElementById('mainInterface').style.display = 'flex';
                 initApp();
             } else {
-                document.getElementById('diagBox').textContent = '密码错误，请重试';
+                diagBox.textContent = '密码错误，请重试';
                 input.style.borderColor = 'var(--danger)';
                 setTimeout(() => input.style.borderColor = '', 2000);
             }
