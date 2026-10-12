@@ -6,8 +6,10 @@ export async function onRequestGet(context) {
     const url = new URL(request.url);
     const adminKey = url.searchParams.get('admin_key');
 
-    // 验证管理员密钥
-    if (!adminKey || adminKey !== env.ADMIN_KEY) {
+    // 验证管理员密钥：优先用KV里首次设置的key，其次用环境变量
+    const kvKey = await env.PANEL_KV.get('chat:admin:key');
+    const validKey = kvKey || env.ADMIN_KEY;
+    if (!adminKey || adminKey !== validKey) {
       return json({ error: '无权限' }, 403);
     }
 

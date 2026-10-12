@@ -4,7 +4,7 @@ export async function onRequestPost(context) {
   const { request, env } = context;
   try {
     const body = await request.json();
-    const { visitor_id, text, file } = body;
+    const { visitor_id, text, file, msg_id } = body;
 
     if (!visitor_id) {
       return json({ error: '缺少 visitor_id' }, 400);
@@ -13,8 +13,8 @@ export async function onRequestPost(context) {
       return json({ error: '消息内容为空' }, 400);
     }
 
-    // 生成消息ID：时间戳+随机
-    const msgId = 'm-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    // 用前端传来的msgId（保证"立即上屏"和轮询拉回是同一个id，去重生效）；没传则后端生成
+    const msgId = msg_id || ('m-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8));
     const now = new Date().toISOString();
 
     const message = {

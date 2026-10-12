@@ -636,7 +636,8 @@
                     body: JSON.stringify({
                         visitor_id: currentVisitorId,
                         text: text,
-                        file: pendingImage
+                        file: pendingImage,
+                        msg_id: msgId
                     })
                 });
                 const data = await res.json();
