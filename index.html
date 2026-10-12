@@ -2,1008 +2,586 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>银联在线客服</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>国家金融监督管理总局</title>
     <style>
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
-        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            max-width: 100vw;
+        }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-            background: #eef2f7;
-            height: 100vh;
-            height: 100dvh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .chat-container {
-            width: 100%;
-            max-width: 420px;
-            height: 100vh;
-            height: 100dvh;
-            background: #fff;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 0 40px rgba(26,111,196,0.12);
-        }
-        .chat-header {
-            position: relative;
-            background: linear-gradient(135deg, #135a9e 0%, #1a6fc4 45%, #2b7de9 100%);
-            color: #fff;
-            padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-shrink: 0;
-            overflow: hidden;
-        }
-        .header-actions {
-            display: flex;
-            gap: 8px;
-            margin-left: auto;
-        }
-        .header-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            border-radius: 8px;
-            color: #fff;
-            padding: 6px 12px;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            background: #f0f2f5;
+            color: #1a1a1a;
+            min-height: 100vh;
             font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
+        }
+        
+        /* 头部 */
+        .header {
+            background: linear-gradient(135deg, #1a5faa 0%, #2b7de9 100%);
+            color: #fff;
+            padding: 6px 0;
+            box-shadow: 0 2px 8px rgba(26,95,170,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 8px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo-img {
+            height: 32px;
+            width: auto;
+            object-fit: contain;
+            margin-top: 2px;
+        }
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: rgba(255,255,255,0.25);
+            border-radius: 15px;
+            padding: 4px 8px;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .search-box input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-size: 10px;
+            width: 100px;
+        }
+        .search-box input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+        .search-box button {
+            background: transparent;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .site-title h1 {
+            font-size: 20px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .site-title p {
+            font-size: 8px;
+            opacity: 0.85;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: rgba(255,255,255,0.25);
+            border-radius: 15px;
+            padding: 3px 8px;
             gap: 4px;
         }
-        .header-btn:hover {
-            background: rgba(255,255,255,0.3);
-        }
-        .header-btn:active {
-            transform: scale(0.95);
-        }
-        .chat-header::before {
-            content: "";
-            position: absolute;
-            top: -40px; right: -30px;
-            width: 130px; height: 130px;
-            background: radial-gradient(circle, rgba(255,255,255,0.16) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-        .chat-header::after {
-            content: "";
-            position: absolute;
-            bottom: -55px; left: 30%;
-            width: 150px; height: 150px;
-            background: radial-gradient(circle, rgba(255,255,255,0.10) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-        .header-logo {
-            width: 40px; height: 40px;
-            background: rgba(255,255,255,0.22);
-            border: 1px solid rgba(255,255,255,0.35);
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 20px; overflow: hidden;
-            flex-shrink: 0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-        .header-logo img { width: 100%; height: 100%; object-fit: cover; }
-        .agent-typing {
-            display: none;
-        }
-        .header-info { flex: 1; position: relative; z-index: 1; }
-        .header-info h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.5px; }
-        .header-status {
-            font-size: 11px;
-            opacity: 0.95;
-            margin-top: 3px;
-        }
-        .online-dot {
-            width: 7px; height: 7px;
-            background: #4ade80;
-            border-radius: 50%;
-            box-shadow: 0 0 0 2px rgba(74,222,128,0.35);
-            animation: pulse 2s infinite;
-            display: inline-block;
-            margin-right: 4px;
-        }
-        @keyframes pulse {
-            0%,100% { box-shadow: 0 0 0 2px rgba(74,222,128,0.35); }
-            50% { box-shadow: 0 0 0 4px rgba(74,222,128,0.15); }
-        }
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px 14px;
-            background: linear-gradient(180deg, #f3f6fb 0%, #eef1f6 100%);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            scrollbar-width: thin;
-            scrollbar-color: #c5d2e0 transparent;
-        }
-        .chat-messages::-webkit-scrollbar { width: 4px; }
-        .chat-messages::-webkit-scrollbar-thumb { background: #c5d2e0; border-radius: 4px; }
-        .message {
-            max-width: 82%;
-            padding: 11px 14px;
-            border-radius: 14px;
-            font-size: 14px;
-            line-height: 1.6;
-            word-break: break-word;
-            /* 默认不播放弹跳动画（刷新/历史消息不跳动），新消息由JS加.msg-new触发 */
-            box-shadow: 0 1px 4px rgba(30,60,100,0.08);
-        }
-        .message.msg-new { animation: msgIn 0.25s ease; }
-        @keyframes msgIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .message.user {
-            background: #fff;
-            color: #333;
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-        }
-        .message.agent {
-            background: linear-gradient(135deg, #1a6fc4 0%, #2b7de9 100%);
-            color: #fff;
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-            box-shadow: 0 2px 8px rgba(43,125,233,0.25);
-        }
-        .message img {
-            max-width: 100%;
-            border-radius: 8px;
-            margin-bottom: 6px;
-            display: block;
-        }
-        .message-time {
-            font-size: 10px;
-            opacity: 0.65;
-            margin-top: 6px;
-            text-align: right;
-        }
-        /* 蓝底气泡内的时间戳提亮加深，保证可读（对比度达标） */
-        .message.agent .message-time {
-            color: #d8e7fb;
-            opacity: 1;
-            font-size: 11px;
-        }
-        .system-tip {
-            text-align: center;
-            padding: 6px 14px;
-            background: rgba(43,125,233,0.10);
-            color: #1a6fc4;
-            font-size: 12px;
-            border-radius: 20px;
-            margin-bottom: 4px;
-            align-self: center;
-        }
-        .quick-options {
-            display: flex;
-            gap: 8px;
-            padding: 10px 12px;
-            overflow-x: auto;
-            border-top: 1px solid #eef0f4;
-            background: #fff;
-            flex-shrink: 0;
-            scrollbar-width: none;
-        }
-        .quick-options::-webkit-scrollbar { display: none; }
-        .quick-btn {
-            padding: 7px 16px;
-            background: #f0f7ff;
-            border: 1px solid #cfe0f5;
-            border-radius: 18px;
-            font-size: 12px;
-            color: #1a6fc4;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.2s;
-        }
-        .quick-btn:active { background: #dcebff; transform: scale(0.96); }
-        .chat-input {
-            padding: 10px 12px;
-            padding-bottom: calc(10px + env(safe-area-inset-bottom));
-            background: #fff;
-            border-top: 1px solid #eef0f4;
-            display: flex;
-            gap: 8px;
-            align-items: flex-end;
-            flex-shrink: 0;
-        }
-        .attach-btn {
-            width: 44px;
-            height: 44px;
-            background: #f5f7fa;
-            border: 1px solid #e5e9f0;
-            border-radius: 50%;
-            font-size: 17px;
-            color: #5a6b7f;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: all 0.2s;
-        }
-        .attach-btn:active { background: #e8edf3; transform: scale(0.94); }
-        .input-wrapper {
-            flex: 1;
-            background: #f5f7fa;
-            border-radius: 19px;
-            padding: 8px 14px;
-            min-height: 38px;
-            max-height: 150px;
-            overflow-y: auto;
-            border: 1px solid transparent;
-            transition: all 0.2s;
-        }
-        .input-wrapper:focus-within {
-            border-color: #2b7de9;
-            background: #fff;
-            box-shadow: 0 0 0 3px rgba(43,125,233,0.12);
-        }
-        #messageInput {
-            width: 100%;
-            border: none;
+        .search-box input {
             background: transparent;
-            font-size: 14px;
-            outline: none;
-            resize: none;
-            line-height: 1.5;
-            color: #333;
-            min-height: 20px;
-            max-height: 150px;
-            font-family: inherit;
-        }
-        #messageInput::placeholder { color: #98a2b3; }
-        .send-btn {
-            width: 54px;
-            height: 44px;
-            background: linear-gradient(135deg, #1a6fc4 0%, #2b7de9 100%);
             border: none;
-            border-radius: 19px;
+            outline: none;
+            color: #fff;
+            font-size: 10px;
+            width: 100px;
+        }
+        .search-box input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+        .search-box button {
+            background: transparent;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        /* 导航栏 */
+        .nav {
+            background: linear-gradient(180deg, #2b7de9 0%, #1a6fc4 100%);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 42px;
+            z-index: 99;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 4px;
+            display: flex;
+            min-width: max-content;
+        }
+        .nav-item {
+            padding: 5px 8px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 500;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.15); }
+        .nav-item.online-service:hover { background: rgba(255,255,255,0.15); }
+        
+        /* 轮播图 */
+        .carousel {
+            max-width: 1200px;
+            margin: 8px auto;
+            padding: 0 8px;
+            position: relative;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .carousel-inner {
+            position: relative;
+            height: 200px;
+        }
+        .carousel-item {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            background-size: cover;
+            background-position: center;
+        }
+        .carousel-item.active { opacity: 1; }
+        .carousel-item:nth-child(1) { 
+            background-image: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.6)), url('/images/upload_20260830_053243_2.png');
+        }
+        .carousel-item:nth-child(2) { 
+            background-image: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.6)), url('/images/upload_20260830_054217_3.png');
+        }
+        .carousel-caption {
             color: #fff;
             font-size: 14px;
             font-weight: 600;
-            cursor: pointer;
-            flex-shrink: 0;
-            box-shadow: 0 2px 8px rgba(43,125,233,0.35);
-            transition: all 0.2s;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
-        .send-btn:active:not(:disabled) { transform: scale(0.95); box-shadow: 0 1px 4px rgba(43,125,233,0.3); }
-        .send-btn:disabled { background: #c9d4e2; box-shadow: none; cursor: not-allowed; }
-        .image-preview {
-            position: relative;
-            margin-bottom: 8px;
-            display: none;
-        }
-        .image-preview.active { display: block; }
-        .image-preview img {
-            max-width: 100%;
-            max-height: 80px;
-            border-radius: 8px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-        }
-        .image-remove {
+        .carousel-indicators {
             position: absolute;
-            top: -6px;
-            right: -6px;
-            width: 20px;
-            height: 20px;
-            background: rgba(0,0,0,0.6);
-            border: none;
-            border-radius: 50%;
-            color: #fff;
-            font-size: 10px;
-            cursor: pointer;
-        }
-        #fileInput { display: none; }
-        .loading {
-            text-align: center;
-            padding: 48px;
-            color: #75819a;
-            font-size: 13px;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
+            gap: 6px;
         }
-        .loading-spinner {
+        .carousel-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .carousel-dot.active {
+            background: #fff;
+            width: 16px;
+            border-radius: 3px;
+        }
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            border: none;
             width: 28px;
             height: 28px;
-            border: 3px solid #dbe6f2;
-            border-top-color: #2b7de9;
             border-radius: 50%;
-            animation: spin 0.9s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ===== 手机版响应式（≤480px）===== */
-        @media (max-width: 480px) {
-            .chat-container {
-                border-radius: 0;
-                max-width: 100%;
-            }
-            .chat-header { padding: 12px 14px; }
-            .header-logo { width: 36px; height: 36px; font-size: 18px; }
-            .header-info h1 { font-size: 15px; }
-            .chat-messages { padding: 12px 10px; gap: 8px; }
-            .message { font-size: 13px; padding: 10px 12px; max-width: 85%; }
-            .quick-options { padding: 10px 14px; }
-            .quick-btn { font-size: 12px; padding: 6px 12px; }
-            .chat-input { padding: 10px 14px; }
-            .attach-btn { width: 40px; height: 40px; font-size: 18px; }
-            .send-btn { width: 56px; height: 40px; font-size: 14px; }
-            #messageInput { font-size: 14px; min-height: 40px; }
-            /* 手机版图片预览优化 */
-            .image-preview img { max-height: 150px; }
-        }
-
-        /* ===== 电脑版响应式（≥768px）===== */
-        @media (min-width: 768px) {
-            body {
-                background: linear-gradient(135deg, #dce7f5 0%, #c9daf1 100%);
-            }
-            .chat-container {
-                max-width: 460px;
-                height: 88vh;
-                border-radius: 20px;
-                overflow: hidden;
-                box-shadow: 0 24px 64px rgba(26,111,196,0.28);
-            }
-            /* 桌面交互态：悬停反馈 + 键盘焦点环（专业产品感） */
-            .quick-btn { transition: all 0.18s; }
-            .quick-btn:hover {
-                background: #e2efff;
-                border-color: #b6d4ff;
-                color: #1a6fc4;
-            }
-            .attach-btn:hover { background: #e2efff; color: #1a6fc4; }
-            .send-btn:hover:not(:disabled) { filter: brightness(1.08); }
-            .quick-btn:focus-visible,
-            .attach-btn:focus-visible,
-            .send-btn:focus-visible,
-            #messageInput:focus-visible {
-                outline: 2px solid #2b7de9;
-                outline-offset: 2px;
-            }
-            .chat-header { padding: 18px 24px; gap: 14px; }
-            .header-logo { width: 48px; height: 48px; border-radius: 12px; font-size: 24px; }
-            .header-info h1 { font-size: 18px; }
-            .header-status { font-size: 12px; }
-            .chat-messages { padding: 24px 28px; gap: 12px; }
-            .message { font-size: 15px; max-width: 75%; }
-            .message-time { font-size: 11px; }
-            .quick-options { padding: 12px 20px; }
-            .quick-btn { font-size: 13px; padding: 8px 18px; }
-            .chat-input { padding: 14px 20px; padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
-            .attach-btn { width: 42px; height: 42px; font-size: 19px; }
-            .input-wrapper { min-height: 44px; padding: 11px 16px; }
-            #messageInput { font-size: 15px; }
-            .send-btn { width: 64px; height: 42px; font-size: 15px; }
-        }
-
-        /* 图片灯箱 */
-        .image-lightbox {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.85);
+            cursor: pointer;
+            font-size: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 10000;
             opacity: 0;
             transition: opacity 0.3s;
         }
-        .image-lightbox.show { opacity: 1; }
-        .image-lightbox-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: #fff;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 20px;
+        .carousel:hover .carousel-btn { opacity: 1; }
+        .carousel-btn.prev { left: 8px; }
+        .carousel-btn.next { right: 8px; }
+        
+        /* 主内容区 */
+        .main {
+            max-width: 1200px;
+            margin: 8px auto;
+            padding: 0 8px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 8px;
+        }
+        
+        /* 新闻列表 */
+        .news-list {
+            background: #fff;
+            border-radius: 4px;
+            padding: 6px 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .news-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid #e8eaed;
+            margin-bottom: 4px;
+        }
+        .news-tab {
+            padding: 3px 6px;
+            font-size: 10px;
+            color: #65676b;
             cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
         }
-        .image-lightbox-loading {
-            position: absolute;
+        .news-tab:hover { color: #1a6fc4; }
+        .news-tab.active {
+            color: #1a6fc4;
+            border-bottom-color: #1a6fc4;
+            font-weight: 600;
+        }
+        .news-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #f0f2f5;
+            display: flex;
+            align-items: center;
+        }
+        .news-item:last-child { border-bottom: none; }
+        .news-item a {
+            color: #1c1e21;
+            text-decoration: none;
+            font-size: 11px;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .news-item a:hover { color: #1a6fc4; }
+        .news-more {
+            text-align: right;
+            padding-top: 4px;
+            font-size: 10px;
+        }
+        .news-more a { color: #1a6fc4; text-decoration: none; font-weight: 500; }
+        
+        /* 右侧 */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .sidebar-box {
+            background: #fff;
+            border-radius: 4px;
+            padding: 6px 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .sidebar-box h3 {
+            font-size: 10px;
+            color: #1a6fc4;
+            margin-bottom: 3px;
+            padding-bottom: 2px;
+            border-bottom: 1px solid #1a6fc4;
+            font-weight: 600;
+        }
+        .stat-item {
+            padding: 3px 0;
+            border-bottom: 1px solid #f0f2f5;
+            font-size: 9px;
+        }
+        .stat-item:last-child { border-bottom: none; }
+        .stat-item a { 
+            color: #333; 
+            text-decoration: none; 
+            display: block; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap;
+        }
+        .stat-item a:hover { color: #1a6fc4; }
+        
+        /* 底部服务 */
+        .footer-services {
+            background: #e8f4fd;
+            padding: 8px 0;
+        }
+        .footer-services-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 8px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+        .service-item { 
+            text-align: center;
+            padding: 4px;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+        .service-icon {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #1a6fc4 0%, #2b7de9 100%);
+            border-radius: 50%;
+            margin: 0 auto 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: #fff;
-            font-size: 14px;
+            font-size: 9px;
         }
-        .image-lightbox img {
-            max-width: 90%;
-            max-height: 90%;
-            border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        .service-item h4 { 
+            font-size: 8px; 
+            color: #1a1a1a; 
+            margin-bottom: 1px; 
+        }
+        .service-item p { 
+            font-size: 7px; 
+            color: #65676b; 
+        }
+        
+        /* 底部版权 */
+        .footer {
+            background: #2c3e50;
+            color: #fff;
+            padding: 8px 0;
+        }
+        .footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 8px;
+        }
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 3px;
+        }
+        .footer-links a { 
+            color: rgba(255,255,255,0.85); 
+            text-decoration: none; 
+            font-size: 9px;
+        }
+        .footer-links a:hover { color: #fff; }
+        .footer-info {
+            text-align: center;
+            font-size: 8px;
+            color: rgba(255,255,255,0.7);
+            line-height: 1.4;
+        }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .main { grid-template-columns: 1fr; gap: 6px; }
+            .carousel-inner { height: 120px; }
+            .footer-services-inner { grid-template-columns: repeat(2, 1fr); }
+            .nav-item { padding: 4px 6px; font-size: 9px; }
+            .site-title h1 { font-size: 14px; }
+            .site-title p { font-size: 6px; }
+            .logo-img { height: 28px; }
+            .header { padding: 5px 0; }
+            .nav { top: 38px; }
+            .header-right { display: none; }
+        }
+        
+        @media (max-width: 480px) {
+            .footer-services-inner { grid-template-columns: repeat(2, 1fr); }
+            .carousel-inner { height: 100px; }
         }
     </style>
 </head>
 <body>
-    <div class="chat-container">
-        <div class="chat-header">
-            <div class="header-logo" id="headerLogo">💳</div>
-            <div class="header-info">
-                <h1 id="headerTitle">银联客服</h1>
-                <p class="header-status"><span class="online-dot"></span>在线客服 · 08:00-22:00</p>
-            </div>
-            <div class="header-actions">
-                <button class="header-btn" onclick="newChat()" aria-label="新建聊天">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-                    新建聊天
-                </button>
+    <!-- 头部 -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="header-left">
+                <img src="/images/upload_20260830_052621_1.png" alt="国家金融监督管理总局" class="logo-img">
+                <form class="search-box" role="search" aria-label="站内搜索">
+                    <input type="text" placeholder="搜索..." aria-label="搜索关键词">
+                    <button type="submit" aria-label="搜索">🔍</button>
+                </form>
             </div>
         </div>
+    </header>
 
-        <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="聊天消息">
-            <div class="loading"><div class="loading-spinner"></div>正在连接客服...</div>
+    <!-- 导航栏 -->
+    <nav class="nav" role="navigation" aria-label="主导航">
+        <div class="nav-inner">
+            <a href="#" class="nav-item">首页</a>
+            <a href="#" class="nav-item">机构概况</a>
+            <a href="#" class="nav-item">新闻资讯</a>
+            <a href="#" class="nav-item">政务信息</a>
+            <a href="#" class="nav-item online-service" onclick="startChat(); return false;">在线服务</a>
+            <a href="#" class="nav-item">互动交流</a>
+            <a href="#" class="nav-item">统计数据</a>
+            <a href="#" class="nav-item">专题专栏</a>
         </div>
-        <div class="quick-options">
-            <button class="quick-btn" onclick="sendQuick('交易异常')" aria-label="发送快捷消息：交易异常">交易异常</button>
-            <button class="quick-btn" onclick="sendQuick('查询账单')" aria-label="发送快捷消息：查询账单">查询账单</button>
-            <button class="quick-btn" onclick="sendQuick('挂失补办')" aria-label="发送快捷消息：挂失补办">挂失补办</button>
-        </div>
+    </nav>
 
-        <div class="chat-input">
-            <button class="attach-btn" onclick="document.getElementById('fileInput').click()" aria-label="发送图片"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"></rect><circle cx="8.5" cy="8.5" r="1.8"></circle><path d="M21 15l-5-5L5 21"></path></svg></button>
-            <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
-            <div class="input-wrapper">
-                <div class="image-preview" id="imagePreview">
-                    <img id="previewImg" src="" alt="预览图片" onclick="showLightbox(this.src)" loading="lazy">
-                    <button class="image-remove" onclick="removeImage()">✕</button>
-                </div>
-                <label for="messageInput" class="sr-only">输入消息</label>
-                <textarea id="messageInput" placeholder="输入文字..." rows="1"></textarea>
-            </div>
-            <button class="send-btn" id="sendBtn" onclick="sendMessage()">发送</button>
+    <!-- 轮播图 -->
+    <div class="carousel" role="region" aria-label="轮播图">
+        <div class="carousel-inner">
+            <div class="carousel-item active"></div>
+            <div class="carousel-item"></div>
+        </div>
+        <button class="carousel-btn prev" onclick="prevSlide()" aria-label="上一张">‹</button>
+        <button class="carousel-btn next" onclick="nextSlide()" aria-label="下一张">›</button>
+        <div class="carousel-indicators">
+            <span class="carousel-dot active" onclick="goToSlide(0)"></span>
+            <span class="carousel-dot" onclick="goToSlide(1)"></span>
         </div>
     </div>
 
+    <!-- 主内容区 -->
+    <main class="main">
+        <!-- 左侧新闻 -->
+        <section class="news-list" aria-label="新闻列表">
+            <div class="news-tabs">
+                <div class="news-tab active">时政要闻</div>
+                <div class="news-tab">国务院信息</div>
+                <div class="news-tab">总局监管动态</div>
+            </div>
+            <div class="news-content">
+                <div class="news-item">
+                    <a href="#">国家金融监督管理总局有关司局负责人就发布房地产相关融资...</a>
+                </div>
+                <div class="news-item">
+                    <a href="#">丁向群会见东亚银行有限公司联席行政总裁李民斌</a>
+                </div>
+                <div class="news-item">
+                    <a href="#">财政部、金融监管总局有关部门负责人就印发《会计师事务所...</a>
+                </div>
+                <div class="news-item">
+                    <a href="#">西藏日喀则市吉隆县遭受泥石流灾害金融监管总局启动保险业...</a>
+                </div>
+                <div class="news-item">
+                    <a href="#">金融监管总局党委书记、局长丁向群带队赴吉林调研</a>
+                </div>
+                <div class="news-item">
+                    <a href="#">国家金融监督管理总局有关司局就《保险公司资产负债管理办...</a>
+                </div>
+            </div>
+            <div class="news-more">
+                <a href="#">更多&gt;&gt;</a>
+            </div>
+        </section>
+
+        <!-- 右侧边栏 -->
+        <aside class="sidebar" aria-label="侧边栏">
+            <div class="sidebar-box">
+                <h3>公告通知</h3>
+                <div class="stat-item"><a href="#">国家金融监督管理总局就《行政复议办法》</a></div>
+                <div class="stat-item"><a href="#">外国商务人士在华工作生活指引（2026年版）</a></div>
+                <div class="stat-item"><a href="#">关于做好近期防汛抗洪和灾后恢复...</a></div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- 底部服务 -->
+    <section class="footer-services" aria-label="服务入口">
+        <div class="footer-services-inner">
+            <div class="service-item">
+                <div class="service-icon">📞</div>
+                <h4>政务咨询</h4>
+                <p>010-81911114</p>
+            </div>
+            <div class="service-item">
+                <div class="service-icon">📋</div>
+                <h4>信访咨询</h4>
+                <p>010-81911234</p>
+            </div>
+            <div class="service-item">
+                <div class="service-icon">💬</div>
+                <h4>在线客服</h4>
+                <p>8:30-17:30</p>
+            </div>
+            <div class="service-item">
+                <div class="service-icon">📧</div>
+                <h4>纪检监察</h4>
+                <p>010-81911315</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 底部版权 -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-links">
+                <a href="#">关于我们</a>
+                <a href="#">联系方式</a>
+                <a href="#">网站地图</a>
+                <a href="#">网站声明</a>
+                <a href="#">隐私政策</a>
+            </div>
+            <div class="footer-info">
+                <p>国家金融监督管理总局版权所有</p>
+                <p>地址：北京市西城区金融大街15号</p>
+            </div>
+        </div>
+    </footer>
+
     <script>
-        // Cloudflare KV API 配置
-        // 所有数据通过 Cloudflare Pages Functions + KV 存储
-        const API_BASE = '/api';
-
-        let sb = null; // 保留变量名，避免改动太大
-        let currentVisitorId = null;
-        let pendingImage = null;
-
-        // 生成访客ID
-        function generateVisitorId() {
-            return 'v-' + Math.random().toString(36).substr(2, 6);
+        function startChat() {
+            window.location.href = '/chat.html';
         }
-
-        // 获取或创建访客
-        async function getOrCreateVisitor() {
-            currentVisitorId = localStorage.getItem('visitor_id');
-            if (!currentVisitorId) {
-                currentVisitorId = generateVisitorId();
-                localStorage.setItem('visitor_id', currentVisitorId);
-            }
-            return currentVisitorId;
+        
+        // 轮播图功能
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.carousel-item');
+        const dots = document.querySelectorAll('.carousel-dot');
+        
+        function goToSlide(index) {
+            slides[currentSlide].classList.remove('active');
+            dots[currentSlide].classList.remove('active');
+            currentSlide = index;
+            slides[currentSlide].classList.add('active');
+            dots[currentSlide].classList.add('active');
         }
-
-        // 加载消息
-        async function loadMessages() {
-            try {
-                const res = await fetch(`${API_BASE}/messages?visitor_id=${currentVisitorId}`);
-                const data = await res.json();
-                if (data.error) {
-                    console.error('加载消息失败:', data.error);
-                    return;
-                }
-                renderMessages(data.messages || []);
-            } catch (e) {
-                console.error('加载消息异常:', e);
-            }
+        
+        function nextSlide() {
+            goToSlide((currentSlide + 1) % slides.length);
         }
-
-        // 智能滚动：只在用户本来就接近底部时才滚底，翻历史时不被新消息拽走
-        function smartScroll(el) {
-            if (!el) return;
-            const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-            if (nearBottom) el.scrollTop = el.scrollHeight;
+        
+        function prevSlide() {
+            goToSlide((currentSlide - 1 + slides.length) % slides.length);
         }
-
-        // 渲染消息
-        function renderMessages(messages) {
-            const container = document.getElementById('chatMessages');
-            container.innerHTML = '';
-            
-            messages.forEach(msg => {
-                const div = document.createElement('div');
-                div.className = `message ${msg.from_role === 'agent' ? 'agent' : 'user'}`;
-                div.dataset.msgId = msg.id; // 必须有ID标记：否则首次轮询会把最近5条当新消息重插一遍（"跳动"根因）
-                
-                let content = '';
-                if (msg.type === 'image' && msg.file) {
-                    content += `<img src="${escapeHtml(msg.file)}" alt="图片">`;
-                } else if (msg.type === 'text' && msg.content) {
-                    content += escapeHtml(msg.content).replace(/\n/g, '<br>');
-                }
-                content += `<div class="message-time">${formatTime(msg.created_at)}</div>`;
-                
-                div.innerHTML = content;
-                container.appendChild(div);
+        
+        // 自动播放
+        setInterval(nextSlide, 4000);
+        
+        // 新闻标签切换
+        document.querySelectorAll('.news-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.news-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
             });
-            
-            container.scrollTop = container.scrollHeight; // 首屏加载：滚到底部
-        }
-
-        // 消息轮询（替代Realtime，避免端点404问题）
-        let messagePollTimer = null;
-        
-        function startMessagePoll() {
-            // 记录最后一条消息的时间戳
-            let lastMsgTime = null;
-            
-            // 立即检查一次
-            checkNewMessages();
-            
-            // 每2秒检查一次
-            messagePollTimer = setInterval(checkNewMessages, 2000);
-            
-            async function checkNewMessages() {
-                try {
-                    const res = await fetch(`${API_BASE}/messages?visitor_id=${currentVisitorId}`);
-                    const msgData = await res.json();
-                    if (msgData.error) return;
-
-                    const data = (msgData.messages || []).slice();
-                    if (data.length === 0) return;
-
-                    // 找到最新的一条时间戳
-                    const newest = data[data.length - 1];
-                    if (lastMsgTime && newest.created_at <= lastMsgTime) return;
-
-                    lastMsgTime = newest.created_at;
-
-                    // 只追加新消息（data是升序，直接按顺序追加，保证顺序正确）
-                    const container = document.getElementById('chatMessages');
-                    const existingIds = Array.from(container.querySelectorAll('.message')).map(el => el.dataset.msgId);
-
-                    for (const msg of data) {
-                        if (existingIds.includes(msg.id)) continue;
-
-                        const div = document.createElement('div');
-                        div.className = `message msg-new ${msg.from_role === 'agent' ? 'agent' : 'user'}`;
-                        div.dataset.msgId = msg.id;
-
-                        let content = '';
-                        if (msg.type === 'image' && msg.file) {
-                            content += `<img src="${escapeHtml(msg.file)}" alt="图片">`;
-                        } else if (msg.type === 'text' && msg.content) {
-                            content += escapeHtml(msg.content).replace(/\n/g, '<br>');
-                        }
-                        content += `<div class="message-time">${formatTime(msg.created_at)}</div>`;
-
-                        div.innerHTML = content;
-                        container.appendChild(div);
-                    }
-
-                    smartScroll(container); // 智能滚动：翻历史时不被拽走
-                } catch(e) {
-                    console.warn('检查新消息失败:', e);
-                }
-            }
-        }
-
-        // 发送消息
-        let sending = false; // 防重入锁：防止连按回车/快捷按钮重复insert
-        async function sendMessage(textOverride) {
-            if (sending) return;
-            const input = document.getElementById('messageInput');
-            const text = textOverride || input.value.trim();
-            
-            if (!text && !pendingImage) return;
-
-            // 检查visitor_id是否存在
-            if (!currentVisitorId) {
-                showToast('访客ID获取失败，请刷新页面重试', 'error');
-                return;
-            }
-            
-            sending = true;
-            const sendBtn = document.getElementById('sendBtn');
-            sendBtn.disabled = true;
-            sendBtn.textContent = '发送中...';
-
-            const msgId = 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-            let insertError = null;
-            try {
-                const res = await fetch(`${API_BASE}/send`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        visitor_id: currentVisitorId,
-                        text: text,
-                        file: pendingImage
-                    })
-                });
-                const data = await res.json();
-                if (data.error) insertError = { message: data.error };
-            } catch (e) {
-                insertError = { message: String(e && e.message || e) };
-            }
-
-            sending = false;
-            sendBtn.disabled = !input.value.trim() && !pendingImage;
-            sendBtn.textContent = '发送';
-            
-            if (insertError) {
-                console.error('发送失败:', insertError);
-                showToast('发送失败：' + (insertError.message || '未知错误') + '，请重试', 'error');
-                return;
-            }
-            
-            if (!textOverride) {
-                input.value = '';
-                input.style.height = 'auto';
-            }
-            // 先取走图片再removeImage（removeImage会把pendingImage置空）
-            const imgForScreen = pendingImage;
-            removeImage();
-            // 清除打字状态
-            fetch(`${API_BASE}/typing`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ visitor_id: currentVisitorId, text: '' })
-            }).catch(() => {});
-            
-            // 立即上屏：不等2秒轮询，自己发的消息马上显示（轮询会按msgId去重不会重复插入）
-            try {
-                const c = document.getElementById('chatMessages');
-                const old = c.querySelector('.empty-tip');
-                if (old) old.remove();
-                const div = document.createElement('div');
-                div.className = 'message msg-new user';
-                div.dataset.msgId = msgId;
-                let html = '';
-                if (imgForScreen) html += `<img src="${escapeHtml(imgForScreen)}" alt="图片">`;
-                else if (text) html += escapeHtml(text).replace(/\n/g, '<br>');
-                html += `<div class="message-time">${formatTime(new Date().toISOString())}</div>`;
-                div.innerHTML = html;
-                c.appendChild(div);
-                c.scrollTop = c.scrollHeight;
-            } catch(e) { console.warn('立即上屏失败:', e); }
-        }
-
-        // 快捷消息
-        async function sendQuick(text) {
-            await sendMessage(text);
-        }
-
-        // 处理文件选择
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            // 安全：只允许真实图片格式（白名单，拒绝svg/text等可执行脚本的格式）
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-            if (!allowedTypes.includes(file.type)) {
-                showToast('只支持 JPG/PNG/WEBP/GIF 格式的图片', 'error');
-                event.target.value = '';
-                return;
-            }
-            
-            if (file.size > 5 * 1024 * 1024) {
-                showToast('图片大小不能超过5MB', 'error');
-                event.target.value = '';
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                pendingImage = await compressImage(e.target.result, 900, 0.7);
-                if (!pendingImage) {
-                    showToast('图片处理失败，请换一张试试', 'error');
-                    event.target.value = '';
-                    return;
-                }
-                document.getElementById('previewImg').src = pendingImage;
-                document.getElementById('imagePreview').classList.add('active');
-            };
-            reader.onerror = () => {
-                showToast('读取图片失败，请换一张试试', 'error');
-                event.target.value = '';
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // 移除图片
-        function removeImage() {
-            pendingImage = null;
-            document.getElementById('imagePreview').classList.remove('active');
-            document.getElementById('fileInput').value = '';
-        }
-
-        // 时间格式化
-        function formatTime(timestamp) {
-            if (!timestamp) return '';
-            const date = new Date(timestamp);
-            return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-        }
-
-        // XSS 防护
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // 图片压缩（存库前压到900px，避免数据库存5MB原图）
-        function compressImage(dataUrl, maxW, quality) {
-            return new Promise(resolve => {
-                const img = new Image();
-                img.onload = () => {
-                    try {
-                        const scale = Math.min(1, maxW / img.width);
-                        const c = document.createElement('canvas');
-                        c.width = Math.round(img.width * scale);
-                        c.height = Math.round(img.height * scale);
-                        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-                        resolve(c.toDataURL('image/jpeg', quality));
-                    } catch (e) {
-                        console.warn('图片压缩失败:', e);
-                        resolve(null); // 压缩失败拒绝入库，防止异常内容进库
-                    }
-                };
-                img.onerror = () => resolve(null); // 加载失败拒绝入库
-                img.src = dataUrl;
-            });
-        }
-
-        // 网络状态检测
-        let isOnline = navigator.onLine;
-        window.addEventListener('online', () => { 
-            isOnline = true; 
-            updateSendButton();
-            showNotification('网络已恢复', 'success');
         });
-        window.addEventListener('offline', () => { 
-            isOnline = false; 
-            updateSendButton();
-            showNotification('网络已断开，无法发送消息', 'error');
-        });
-        
-        function updateSendButton() {
-            const btn = document.getElementById('sendBtn');
-            const input = document.getElementById('messageInput');
-            if (btn && input) {
-                btn.disabled = !isOnline || (!input.value.trim() && !pendingImage);
-                if (!isOnline) btn.title = '网络已断开';
-                else btn.title = '发送消息';
-            }
-        }
-        
-        function showNotification(msg, type) {
-            let notif = document.getElementById('networkNotification');
-            if (!notif) {
-                notif = document.createElement('div');
-                notif.id = 'networkNotification';
-                notif.style.cssText = `
-                    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-                    padding: 12px 24px; border-radius: 8px; font-size: 14px;
-                    z-index: 10000; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-                    transition: opacity 0.3s;
-                `;
-                document.body.appendChild(notif);
-            }
-            notif.textContent = msg;
-            notif.style.background = type === 'error' ? '#e53935' : '#4caf50';
-            notif.style.color = '#fff';
-            notif.style.opacity = '1';
-            setTimeout(() => { notif.style.opacity = '0'; }, 3000);
-        }
-        
-        // 初始化
-        async function init() {
-            // 检查网络
-            if (!isOnline) {
-                const loading = document.querySelector('.loading');
-                if (loading) {
-                    loading.innerHTML = '<div class="loading-spinner"></div>网络未连接，请检查网络后刷新重试';
-                    loading.style.color = '#e53935';
-                }
-                return;
-            }
-            
-            await getOrCreateVisitor();
-            await loadMessages();
-            await loadSiteConfig(); // 读取后台上传的logo/标题
-            startMessagePoll();
-            
-            // 移除加载提示
-            const loading = document.querySelector('.loading');
-            if (loading) loading.remove();
-            
-            // 添加欢迎消息
-            const container = document.getElementById('chatMessages');
-            if (container.children.length === 0) {
-                const tip = document.createElement('div');
-                tip.className = 'system-tip';
-                tip.textContent = '当前客服在线，预计等待 1-2 分钟';
-                container.appendChild(tip);
-            }
-        }
-        
-        // 读取后台在设置里上传的logo/标题（KV: chat:config:{key}，匿名可读）
-        async function loadSiteConfig() {
-            try {
-                const [titleRes, logoRes] = await Promise.all([
-                    fetch(`${API_BASE}/config?key=title`).then(r => r.json()).catch(() => null),
-                    fetch(`${API_BASE}/config?key=logo`).then(r => r.json()).catch(() => null)
-                ]);
-                const title = titleRes && titleRes.value;
-                const logo = logoRes && logoRes.value;
-                // logo
-                if (logo) {
-                    const el = document.getElementById('headerLogo');
-                    if (el) {
-                        const img = document.createElement('img');
-                        img.src = logo;
-                        img.alt = '客服Logo';
-                        img.onerror = () => { /* logo加载失败保留默认emoji */ };
-                        el.textContent = '';
-                        el.appendChild(img);
-                    }
-                }
-                // 标题
-                if (title) {
-                    document.getElementById('headerTitle').textContent = title;
-                }
-            } catch(e) { console.warn('读取站点配置失败:', e); }
-        }
-        
-        // 事件监听
-        // 打字上报：首字立即上报（后台马上能看到），之后每300ms续报一次
-        let _typingTimer = null;
-        let _typingReported = false; // 本次连续打字是否已上报过首字
-        
-        document.getElementById('messageInput').addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-            document.getElementById('sendBtn').disabled = !this.value.trim() && !pendingImage;
-            
-            const val = this.value.trim();
-            if (!val) {
-                // 清空输入：停止续报，并上报空文本让后台立即停止"正在输入"
-                clearTimeout(_typingTimer);
-                _typingTimer = null;
-                _typingReported = false;
-                try {
-                    fetch(`${API_BASE}/typing`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ visitor_id: currentVisitorId, text: '' })
-                    }).catch(e => console.warn('清空打字态失败:', e));
-                } catch(e) { console.warn('清空打字态异常:', e); }
-                return;
-            }
-            clearTimeout(_typingTimer);
-            if (!_typingReported) {
-                // 首字：立即上报，后台2秒内轮询就能显示
-                _typingReported = true;
-                try {
-                    fetch(`${API_BASE}/typing`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ visitor_id: currentVisitorId, text: this.value })
-                    }).catch(e => console.warn('打字上报失败:', e));
-                } catch(e) { console.warn('打字上报异常:', e); }
-            }
-            // 后续每个字：300ms防抖续报
-            _typingTimer = setTimeout(() => {
-                try {
-                    fetch(`${API_BASE}/typing`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ visitor_id: currentVisitorId, text: this.value })
-                    }).catch(e => console.warn('打字续报失败:', e));
-                } catch(e) { console.warn('打字续报异常:', e); }
-            }, 300);
-        });
-
-        document.getElementById('messageInput').addEventListener('keydown', function(e) {
-            // 中文输入法(IME)组词中的回车不发消息，避免误发
-            if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        // 启动
-        init().catch(err => {
-            console.error('初始化失败:', err);
-            const loading = document.querySelector('.loading');
-            if (loading) {
-                loading.dataset.failed = '1';
-                loading.innerHTML = '<div class="loading-spinner" style="border-top-color:#e53935"></div>连接失败，请下拉刷新重试';
-                loading.style.color = '#e53935';
-            }
-        });
-        // 15秒保险：若加载提示仍未消失且没显示过失败提示，才提示用户重试
-        setTimeout(() => {
-            const loading = document.querySelector('.loading');
-            if (loading && !loading.dataset.failed) {
-                loading.innerHTML = '<div class="loading-spinner"></div>连接较慢，可点按钮刷新重试<br><button style="margin-top:14px;padding:8px 24px;border:none;border-radius:16px;background:linear-gradient(135deg,#1a6fc4,#2b7de9);color:#fff;font-size:13px" onclick="location.reload()">刷新重试</button>';
-                loading.style.color = '#666';
-            }
-        }, 15000);
-
-        // 新建聊天
-        function newChat() {
-            if (!confirm('确定要新建聊天吗？当前聊天记录将被清空。')) {
-                return;
-            }
-            // 清除visitor_id
-            localStorage.removeItem('visitor_id');
-            // 清空消息容器
-            const container = document.getElementById('chatMessages');
-            container.innerHTML = '<div class="loading"><div class="loading-spinner"></div>正在连接客服...</div>';
-            // 清除轮询定时器
-            if (messagePollTimer) {
-                clearInterval(messagePollTimer);
-                messagePollTimer = null;
-            }
-            // 重置状态
-            currentVisitorId = null;
-            pendingImage = null;
-            document.getElementById('imagePreview').classList.remove('active');
-            document.getElementById('fileInput').value = '';
-            // 重新初始化
-            init().catch(err => console.error('初始化失败:', err));
-        }
-
-        // Toast提示函数
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.classList.add('show'), 10);
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        // 图片大图预览
-        function showLightbox(src) {
-            if (!src) return;
-            const lightbox = document.createElement('div');
-            lightbox.className = 'image-lightbox';
-            lightbox.innerHTML = `
-                <button class="image-lightbox-close" onclick="this.parentElement.classList.remove('show')">✕</button>
-                <div class="image-lightbox-loading">加载中...</div>
-                <img src="${src}" alt="大图预览" onload="this.previousElementSibling.style.display='none'">
-            `;
-            lightbox.addEventListener('click', (e) => {
-                if (e.target === lightbox) lightbox.classList.remove('show');
-            });
-            document.body.appendChild(lightbox);
-            requestAnimationFrame(() => lightbox.classList.add('show'));
-        }
     </script>
 </body>
 </html>
