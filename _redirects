@@ -1,2 +1,1 @@
-/chat    /chat.html    200
-/admin   /admin.html   200
+# 无重定向规则：chat.html / admin.html 直接服务，避免与 Cloudflare 的 .html 规范化形成循环
